@@ -1,0 +1,58 @@
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Data (never commit datasets) ---
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+*.csv
+*.zip
+*.parquet
+
+# --- Model artifacts ---
+models/*
+!models/README.md
+
+# --- Node / Next.js (also covered by frontend/.gitignore) ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+
+# --- Logs ---
+*.log
+
+# --- Local tooling ---
+.claude/
