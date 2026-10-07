@@ -33,6 +33,13 @@
   --critical: #d70015;
   --critical-soft: rgb(215 0 21 / 0.1);
 
+  /* Charts (validated palette: dataviz reference, light surface) */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-positive: #2a78d6;
+  --chart-negative: #e34948;
+  --chart-neutral: #f0efec;
+
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 0 0 0.5px rgb(0 0 0 / 0.05);
   --shadow-raised: 0 12px 32px -12px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(0 0 0 / 0.06);
 }
@@ -63,6 +70,12 @@
     --caution-soft: rgb(255 159 10 / 0.16);
     --critical: #ff453a;
     --critical-soft: rgb(255 69 58 / 0.16);
+
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-positive: #3987e5;
+    --chart-negative: #e66767;
+    --chart-neutral: #383835;
 
     --shadow-card: 0 0 0 0.5px rgb(255 255 255 / 0.06);
     --shadow-raised: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 0 0 0.5px rgb(255 255 255 / 0.08);
@@ -95,6 +108,12 @@
   --critical: #ff453a;
   --critical-soft: rgb(255 69 58 / 0.16);
 
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-positive: #3987e5;
+  --chart-negative: #e66767;
+  --chart-neutral: #383835;
+
   --shadow-card: 0 0 0 0.5px rgb(255 255 255 / 0.06);
   --shadow-raised: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 0 0 0.5px rgb(255 255 255 / 0.08);
 }
@@ -119,6 +138,8 @@
   --color-caution-soft: var(--caution-soft);
   --color-critical: var(--critical);
   --color-critical-soft: var(--critical-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
 
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);

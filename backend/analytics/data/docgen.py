@@ -90,6 +90,26 @@ def _derived_sections() -> list[str]:
         lines.append(f"| `{f.name}` | {f.definition}{replaces} | {f.reason} | {f.leakage} |")
     lines += ["", "Considered and not added:", ""]
     lines += [f"- **{name}**: {reason}" for name, reason in REJECTED_FEATURES]
+    return lines + _grouping_section()
+
+
+def _grouping_section() -> list[str]:
+    from analytics.statistics.groups import GROUPINGS
+
+    lines = [
+        "",
+        "## Analysis groupings (Phase 4)",
+        "",
+        "Groups used by statistical comparisons and charts (`analytics/statistics/groups.py`).",
+        "They are fixed in advance and never tuned to results. Only these differ from raw codes:",
+        "",
+        "| Grouping | Groups | Note |",
+        "| -------- | ------ | ---- |",
+    ]
+    for g in GROUPINGS.values():
+        if g.note:
+            levels = ", ".join(label for _, label in g.levels)
+            lines.append(f"| `{g.variable}` | {levels} | {g.note} |")
     return lines
 
 

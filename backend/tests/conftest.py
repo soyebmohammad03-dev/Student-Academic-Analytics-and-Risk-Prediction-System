@@ -24,3 +24,14 @@ def dataset(settings: Settings) -> Settings:
     write_cohort(settings.raw_data_dir / "student-mat.csv", make_rows(30))
     write_cohort(settings.raw_data_dir / "student-por.csv", make_rows(12, school="MS"))
     return settings
+
+
+@pytest.fixture
+def analytical(tmp_path):
+    """Analytical frame of a varied synthetic cohort (300 rows)."""
+    from analytics.data import Cohort, load_cohort
+    from analytics.preprocessing import prepare_cohort
+    from tests.factories import make_varied_rows
+
+    write_cohort(tmp_path / "student-mat.csv", make_varied_rows(300, seed=7))
+    return prepare_cohort(load_cohort(tmp_path, Cohort.MATH)).analytical

@@ -47,7 +47,7 @@ relevant, reported as observations. Both official files pass every check.
    duplicates.
 2. **Preprocessing and feature engineering** (Phase 3, §4): targets, feature
    scenarios, encoding, engineered features, train/test split.
-3. **Statistics and EDA** (Phase 4):
+3. **Statistics and EDA** (Phase 4, §5):
    - Descriptive statistics: central tendency, dispersion, quartiles, shape.
    - Correlation: Pearson where the relationship is linear and approximately normal,
      Spearman for ordinal or non-normal data.
@@ -213,7 +213,186 @@ and grades. Nothing indicates whether a student later left school. A low or zero
 `G3` is a performance outcome, and treating it as dropout would be an unsupported
 inference.
 
-## 5. Evaluation (Phase 5)
+## 5. Statistical analysis (Phase 4)
+
+Implemented in `backend/analytics/statistics/`. Results for the official data are in
+[STATISTICAL_FINDINGS.md](STATISTICAL_FINDINGS.md). That document is generated from
+code, and a test fails if it goes stale.
+
+### 5.1 Scope and data
+
+- **Data.** Every analysis uses the Phase 3 analytical frame: validated values plus
+  `at_risk`. All students are included, **including those with `G3 = 0`**.
+- **Cohorts.** Mathematics and Portuguese are analysed separately. This keeps
+  observations independent, because some students appear in both files.
+- **No model training.** Nothing in this phase changes the data.
+
+### 5.2 Research questions
+
+Seven tests (RQ1–RQ6b) were fixed in advance as the **confirmatory family**. Two
+further questions (RQ7, RQ8) are **exploratory**.
+
+| RQ | Question | Pre-specified primary analysis |
+| -- | -------- | ------------------------------ |
+| RQ1 | Is weekly study time associated with G3? | Spearman ρ (study time is a 4-level ordinal code) |
+| RQ2 | Do students with past failures perform differently? | Two-group comparison: no failures vs 1 or more |
+| RQ3 | Are absences associated with G3? | Spearman ρ (skewed count) |
+| RQ4 | Do grades differ between female and male students? | Two-group comparison |
+| RQ5 | Is mother's education associated with G3? | Four-group comparison (levels 0–1 merged), with post-hoc tests |
+| RQ6a | Is school support associated with G3? | Two-group comparison |
+| RQ6b | Is family support associated with G3? | Two-group comparison |
+| RQ7 | Which numeric variables relate most strongly to G3? | Exploratory ranking of Spearman ρ |
+| RQ8 | Which categorical variables are associated with academic risk? | Exploratory chi-square tests with Cramér's V |
+
+Hypotheses are two-sided. For example, RQ1 tests H0: ρ = 0 against H1: ρ ≠ 0.
+"Two-group comparison" means the test is chosen by the rule in §5.3.
+
+### 5.3 Test selection and assumption checks
+
+The same rule applies to every group comparison, and it is fixed in code
+(`comparisons.py`).
+
+1. **Normality, per group.** A group is adequate for a mean-based test if Shapiro–Wilk
+   does not reject normality. It is also adequate if n ≥ 30 and |skewness| ≤ 1, because
+   the sampling distribution of the mean is then approximately normal (central limit
+   theorem).
+   - Shapiro–Wilk alone is not used as a gate. With hundreds of students it rejects
+     trivial departures.
+2. **Variance homogeneity.** Levene's test, median-centred (Brown–Forsythe), which is
+   robust to non-normality.
+3. **Choice of test:**
+
+   | Groups | All adequate? | Variances | Test | Effect size | Post-hoc (if omnibus p < α) |
+   | ------ | ------------- | --------- | ---- | ----------- | --------------------------- |
+   | 2 | yes | any | Welch's t-test | Cohen's d with 95% CI; mean difference with 95% CI | — |
+   | 2 | no | — | Mann–Whitney U | rank-biserial r | — |
+   | 3+ | yes | equal | One-way ANOVA | η², ω² | Tukey HSD |
+   | 3+ | yes | unequal | Welch's ANOVA | η², ω² | Games–Howell |
+   | 3+ | no | — | Kruskal–Wallis H | η²_H | Dunn's test, Holm-adjusted |
+
+   Welch's t-test is used rather than Student's t-test because it loses almost nothing
+   when variances are equal and stays valid when they are not.
+4. **Group sizes.** Groups below n = 10 are flagged as imprecise.
+   - Mother's and father's education level 0 is merged with level 1, because very few
+     students have level 0 (e.g. 3 mothers in Mathematics).
+   - Absences are binned into 0 / 1–5 / 6–10 / 11–20 / 21+ for description only. The
+     primary absence analysis uses the raw count.
+5. **Independence.** Each row is a different student within one cohort.
+
+### 5.4 Correlation
+
+- **Spearman** is used when either variable is an ordinal code or a bounded count, or
+  when normality of either variable is rejected.
+- **Pearson** is used only when both variables are interval-scaled and normality is not
+  rejected. In practice every key pair uses Spearman, because grades and counts are
+  non-normal.
+- Pearson's r is always reported alongside, for comparison.
+- **Interval.** The 95% CI uses Fisher's z: standard error 1/√(n − 3) for Pearson, and
+  the Bonett–Wright (2000) standard error for Spearman.
+- **Matrix.** A Spearman matrix covers 16 numeric variables, with Benjamini–Hochberg
+  adjustment across all pairs.
+
+### 5.5 Categorical association
+
+- **Test.** Pearson's chi-square test of independence between each categorical
+  variable and `at_risk`, without Yates' correction.
+- **Sparse tables.** For a 2×2 table with an expected count below 5, Fisher's exact test
+  is used. Larger tables with more than 20% of expected counts below 5 are flagged.
+- **Effect size.** Cramér's V, interpreted against Cohen's w benchmarks divided by
+  √(min(r, c) − 1).
+- **Output.** Contingency counts and the at-risk share per category, each with a Wilson
+  95% CI, are returned with every test.
+
+### 5.6 Significance, confidence intervals and effect sizes
+
+- **Significance threshold.** α = 0.05, two-sided.
+- **Confidence intervals.** 95%, using these methods:
+  - means: t interval;
+  - proportions: Wilson score interval;
+  - correlations: Fisher z;
+  - Cohen's d: normal approximation (Hedges & Olkin);
+  - mean differences: Welch interval.
+- **CIs are not adjusted for multiplicity.**
+- **Effect sizes** are always reported and labelled with Cohen's conventional benchmarks:
+  - r and ρ: 0.1 / 0.3 / 0.5;
+  - d: 0.2 / 0.5 / 0.8;
+  - η²: 0.01 / 0.06 / 0.14.
+
+  These labels are rough guides, not judgements of practical importance. A result is
+  never described as important because p < 0.05.
+
+### 5.7 Multiple comparisons
+
+| Family | Correction | Purpose |
+| ------ | ---------- | ------- |
+| Confirmatory: RQ1–RQ6b, 7 tests per cohort | Holm–Bonferroni | Controls the family-wise error rate; supports conclusions |
+| Key correlations with G3: 6 pairs | Holm–Bonferroni | |
+| Correlation matrix, association tests, RQ7, RQ8 | Benjamini–Hochberg | Controls the false discovery rate; exploratory |
+| Post-hoc pairs | Tukey HSD / Games–Howell (built-in), Dunn + Holm | Within each omnibus test |
+
+- Interactive group comparisons on the Statistical Analysis page are exploratory and
+  are labelled as unadjusted.
+- Only the confirmatory family should be cited as answering a research question.
+
+### 5.8 Zero final grades: sensitivity
+
+`G3 = 0` rows are kept in every primary analysis, as decided in Phase 3.
+
+- **What the data shows.** In both cohorts, **every** student with `G3 = 0` has 0
+  recorded absences. Among students with `G3 > 0` the figure is 21.6% (Mathematics)
+  and 36.1% (Portuguese). This suggests that some zero grades may reflect a missed final
+  evaluation rather than low attainment. The data cannot confirm this.
+- **Sensitivity analyses.** Every confirmatory analysis, and every key correlation, is
+  therefore also reported without these students. These re-runs are labelled
+  exploratory, with unadjusted p-values.
+- **Where it matters.** The absence–G3 relationship in Mathematics changes materially
+  without zero grades (see the findings document). This is an input for Phase 5.
+
+### 5.9 Outliers
+
+- **Method.** Tukey fences (Q1 − 1.5·IQR, Q3 + 1.5·IQR) and |z| > 3, applied to age,
+  absences, G1, G2 and G3.
+- **Excluded.** `failures` (zero-inflated) and the bounded ordinal codes.
+- **Reported:** fences, counts below and above, the share flagged, and the flagged
+  values.
+- **Nothing is removed.** Every value passed validation against the documented range,
+  so an outlier here is an unusual student, not an error.
+
+### 5.10 Exploratory data analysis
+
+`eda.py` returns chart-ready aggregates. No raw records are sent.
+
+- **Univariate:** histograms of G1/G2/G3 (integer bins 0–20) and absences (bins of 5);
+  category counts.
+- **Bivariate:** box plots of G3 by group (whiskers at 1.5·IQR, mean marked); scatter
+  plots of G1, G2 and absences against G3, with identical points aggregated.
+- **Multivariate:**
+  - Spearman heatmap;
+  - academic-risk profile: means or % yes for at-risk vs not-at-risk students, with
+    Cohen's d;
+  - mean G3 by study time × past failures, with cell sizes.
+
+Charts use a validated colour palette that is safe for colour-vision deficiency. They
+carry no 3D or decorative effects, and each has a "Show data" table, so no value
+depends on colour alone.
+
+### 5.11 Language and limitations
+
+- **Association only.** Results are associations in observational, cross-sectional data
+  from two Portuguese schools in one school year. Their wording follows the pattern
+  "X is associated with G3", never "X causes" or "X predicts failure". A test checks
+  generated text for causal phrasing.
+- **Confounding and reverse direction are plausible.** For example, school support is
+  associated with *lower* grades, most likely because support is given to students who
+  are already struggling.
+- **Self-reported and coarse measures.** Study time, alcohol use and similar variables
+  are questionnaire codes.
+- **Sample sizes differ by cohort.** Mathematics (n = 395) has less power than
+  Portuguese (n = 649), so a non-significant result is not evidence of no relationship.
+- **Statistics are not prediction.** Phase 5 models are evaluated separately, on
+  held-out data.
+
+## 6. Evaluation (Phase 5)
 
 - Regression: MAE, MSE, RMSE, R².
 - Classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix. Because

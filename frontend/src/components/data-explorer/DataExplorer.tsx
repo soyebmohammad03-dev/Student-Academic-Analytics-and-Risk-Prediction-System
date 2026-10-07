@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -16,6 +15,7 @@ import {
   datasetPath,
 } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { cohortOptions, useCohort } from "@/lib/useCohort";
 
 import { CohortOverlap } from "./CohortOverlap";
 import { DataDictionary } from "./DataDictionary";
@@ -27,23 +27,13 @@ import { DataUnavailable } from "./states";
 export const PAGE_SIZE = 25;
 const SEARCH_DELAY_MS = 250;
 
-const cohortOptions = [
-  { value: "math", label: "Mathematics" },
-  { value: "portuguese", label: "Portuguese" },
-] as const satisfies ReadonlyArray<{ value: Cohort; label: string }>;
-
-function parseCohort(value: string | null): Cohort {
-  return value === "portuguese" ? "portuguese" : "math";
-}
-
 /** Keep only data that belongs to the selected cohort, never a stale one. */
 function forCohort<T extends { cohort: Cohort }>(data: T | undefined, cohort: Cohort) {
   return data?.cohort === cohort ? data : undefined;
 }
 
 export function DataExplorer() {
-  const searchParams = useSearchParams();
-  const [cohort, setCohort] = useState<Cohort>(() => parseCohort(searchParams.get("cohort")));
+  const [cohort, setCohort] = useCohort();
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
@@ -73,7 +63,6 @@ export function DataExplorer() {
     setPage(1);
     setSearchInput("");
     setQuery("");
-    window.history.replaceState(null, "", `?cohort=${next}`);
   }
 
   const error = summary.error ?? quality.error ?? schema.error ?? records.error;

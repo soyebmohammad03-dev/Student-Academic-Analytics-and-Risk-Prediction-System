@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { ModulePlaceholder } from "@/components/ModulePlaceholder";
-import { getModule } from "@/lib/modules";
+import { StatisticsView } from "@/components/statistics/StatisticsView";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-const appModule = getModule("statistics");
-
-export const metadata: Metadata = { title: appModule.title };
+export const metadata: Metadata = { title: "Statistical Analysis" };
 
 export default function StatisticsPage() {
-  return <ModulePlaceholder module={appModule} />;
+  return (
+    // Reads ?cohort= from the URL, so it renders on the client.
+    <Suspense fallback={<Skeleton className="h-64 w-full rounded-2xl" />}>
+      <StatisticsView />
+    </Suspense>
+  );
 }

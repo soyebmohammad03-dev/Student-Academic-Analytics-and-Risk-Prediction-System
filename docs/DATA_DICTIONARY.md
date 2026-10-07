@@ -78,6 +78,17 @@ Considered and not added:
 - **support_count (schoolsup + famsup + paid)**: Adds heterogeneous forms of support as if they were equivalent; the three indicators are kept separately.
 - **alcohol composite (Dalc + Walc)**: No documented scale for combining the two ratings; both are kept as recorded.
 
+## Analysis groupings (Phase 4)
+
+Groups used by statistical comparisons and charts (`analytics/statistics/groups.py`).
+They are fixed in advance and never tuned to results. Only these differ from raw codes:
+
+| Grouping | Groups | Note |
+| -------- | ------ | ---- |
+| `absence_band` | None, 1–5, 6–10, 11–20, 21+ | Descriptive bands; the primary absence analysis uses the raw count. |
+| `Medu` | Primary or less, 5th to 9th grade, Secondary, Higher education | Level 0 (none) merged with level 1 because it has very few students. |
+| `Fedu` | Primary or less, 5th to 9th grade, Secondary, Higher education | Level 0 (none) merged with level 1 because it has very few students. |
+
 ## Grades
 
 - `G1`: first-period grade, `G2`: second-period grade, `G3`: final grade.

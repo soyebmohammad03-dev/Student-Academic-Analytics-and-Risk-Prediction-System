@@ -10,7 +10,7 @@ meaningful commit and a push. Phases are never combined into a single commit.
 | 1     | Foundation & architecture                   | ✅ Complete |
 | 2     | Real dataset & Data Explorer                | ✅ Complete |
 | 3     | Preprocessing & feature engineering         | ✅ Complete |
-| 4     | Statistics & exploratory data analysis      | Planned     |
+| 4     | Statistics & exploratory data analysis      | ✅ Complete |
 | 5     | Machine learning & model evaluation         | Planned     |
 | 6     | Interpretability & academic risk analysis   | Planned     |
 | 7     | End-to-end backend integration              | Planned     |
@@ -52,16 +52,22 @@ statistics so that both statistics and modelling build on the same analytical da
 - Reproducible stratified 80/20 split (`random_state=42`), shared by both tasks.
 - Preprocessing quality report and `GET /api/v1/preprocessing/summary`.
 
-## Phase 4 — Statistics & exploratory data analysis
-- Descriptive statistics for every attribute, on the analytical dataset.
-- Normality and variance-homogeneity checks to choose parametric or non-parametric tests.
-- Pearson/Spearman correlations with p-values.
-- t-test/Mann–Whitney, ANOVA/Kruskal–Wallis and chi-square/Fisher, with effect sizes
-  and multiple-comparison correction.
-- Univariate, bivariate and multivariate EDA, outlier analysis and performance
-  profiling. Focus: study time, absences, failures, grades, parental education,
-  support, and demographic and social factors.
-- Statistical Analysis and EDA pages.
+## Phase 4 — Statistics & exploratory data analysis ✅
+- `backend/analytics/statistics/`:
+  - descriptive statistics and G1–G3 distributions;
+  - Spearman/Pearson correlations with CIs;
+  - assumption-driven group comparisons: Welch's t, Mann–Whitney, ANOVA, Welch's ANOVA,
+    Kruskal–Wallis, with Tukey / Games–Howell / Dunn post-hoc tests;
+  - chi-square/Fisher with Cramér's V;
+  - effect sizes with 95% CIs, and outlier screening.
+- Nine research questions. RQ1–RQ6b are confirmatory, Holm-corrected; RQ7–RQ8 are
+  exploratory, Benjamini–Hochberg-corrected.
+- Zero-grade sensitivity analyses: every G3 = 0 student has 0 absences.
+- EDA chart data: univariate, bivariate, heatmap, risk profile and cross-tab.
+- `docs/STATISTICAL_FINDINGS.md`, generated from code.
+- API: `/statistics/*` and `/eda/charts`.
+- Functional Statistical Analysis and EDA pages with reusable, accessible SVG charts.
+  Final polish is Phase 8.
 
 ## Phase 5 — Machine learning & model evaluation
 - Baselines: mean predictor and majority class.
@@ -75,7 +81,8 @@ statistics so that both statistics and modelling build on the same analytical da
   - regression: MAE, MSE, RMSE, R²;
   - classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix.
 - Results reported per cohort and per scenario.
-- A sensitivity check on `G3 = 0` rows.
+- A sensitivity check on `G3 = 0` rows. Phase 4 found that every such student has 0
+  absences, and that this changes the absence–G3 relationship in Mathematics.
 - Persisted artifacts with metadata.
 
 ## Phase 6 — Interpretability & academic risk analysis

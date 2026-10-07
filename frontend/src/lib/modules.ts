@@ -47,7 +47,7 @@ export const analysisModules: AppModule[] = [
     href: "/statistics",
     icon: Sigma,
     phase: 4,
-    status: "planned",
+    status: "available",
     summary: "Descriptive, correlational and inferential statistics with effect sizes.",
     scope: [
       "Mean, median, mode, variance, standard deviation, range, quartiles",
@@ -63,7 +63,7 @@ export const analysisModules: AppModule[] = [
     href: "/eda",
     icon: ChartScatter,
     phase: 4,
-    status: "planned",
+    status: "available",
     summary: "Univariate, bivariate and multivariate patterns behind academic performance.",
     scope: [
       "Distributions, box plots and group comparisons",

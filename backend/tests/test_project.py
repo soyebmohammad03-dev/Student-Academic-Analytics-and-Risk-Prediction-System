@@ -25,4 +25,4 @@ def test_only_delivered_modules_claim_to_be_available(client):
     modules = client.get("/api/v1/project").json()["modules"]
 
     available = {m["key"] for m in modules if m["status"] == "available"}
-    assert available == {"data"}
+    assert available == {"data", "statistics", "eda"}

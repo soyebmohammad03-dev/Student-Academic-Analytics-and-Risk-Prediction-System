@@ -5,11 +5,10 @@ of student data, through **exploratory analytics** and **reproducible preprocess
 to a **comparison of machine-learning models** that predict academic performance and
 identify **academic risk** — presented through a modern, interpretable web application.
 
-> **Status: Phase 3 of 9 complete — leakage-safe preprocessing and feature
-> engineering.** The official UCI dataset is downloaded, verified and validated. The
-> Data Explorer serves the real records. A reproducible scikit-learn preprocessing
-> pipeline provides targets, scenario-specific feature matrices and stratified splits.
-> No statistical analysis has been run and no model has been trained yet; those
+> **Status: Phase 4 of 9 complete — statistical analysis and exploratory analytics.**
+> The official UCI dataset is validated and preprocessed without leakage. Statistical
+> tests, effect sizes and EDA charts are computed from the real data and shown in the
+> Statistical Analysis and EDA pages. No predictive model has been trained yet; those
 > modules are marked as planned. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
 
 ISPA undergraduate AI / Data Analytics project.
@@ -84,8 +83,8 @@ academic-risk insights → Web application
 
 | Stage | Planned content |
 | ----- | --------------- |
-| Statistical analysis | Mean, median, mode, variance, SD, range, quartiles, distribution shape; Pearson/Spearman correlation with significance; t-test, ANOVA, chi-square, and non-parametric alternatives (Mann–Whitney, Kruskal–Wallis) when assumptions fail; effect sizes |
-| Exploratory analysis | Univariate, bivariate and multivariate analysis; histograms, box plots, bar charts, scatter plots, correlation heatmaps; outliers; group comparisons; performance profiling |
+| Statistical analysis (implemented) | Descriptive statistics; Spearman/Pearson correlations with CIs; assumption-checked tests (Welch's t, Mann–Whitney, ANOVA, Welch's ANOVA, Kruskal–Wallis, chi-square/Fisher) with post-hoc tests; effect sizes with 95% CIs; Holm and Benjamini–Hochberg corrections |
+| Exploratory analysis (implemented) | Histograms, bar charts, box plots, scatter plots, correlation heatmap, academic-risk profile, cross-tab, outlier screening |
 | Preprocessing (implemented) | Targets, leakage-aware feature scenarios, one-hot/ordinal encoding with fixed categories, two justified engineered features, training-only imputation/scaling, stratified reproducible split |
 | Modelling | Regression and classification candidates compared with cross-validation |
 | Interpretation | Model-agnostic feature importance and per-prediction explanations |
@@ -111,6 +110,33 @@ Defined before any training — full detail in [docs/METHODOLOGY.md](docs/METHOD
   doesn't match its scenario. Neither end of the range is "better": `full_history`
   shows how predictable grades are once interim grades exist, and `early` shows what
   is knowable before any grade.
+
+### Statistical analysis (Phase 4)
+
+`backend/analytics/statistics/` answers nine research questions for each cohort.
+**All results are associations in observational data; none implies cause.** Effect
+sizes are always reported with significance.
+
+Selected findings on the official data (all from
+[docs/STATISTICAL_FINDINGS.md](docs/STATISTICAL_FINDINGS.md), which is generated from
+code):
+
+- **Past class failures.** These show the clearest non-grade association with lower
+  final grades in both cohorts (large effect in Mathematics, d = 0.93; Holm p < .001).
+  They are also the strongest categorical correlate of academic risk.
+- **Mother's education.** Associated with G3 in both cohorts (small to medium effect).
+- **Study time.** Weakly associated with G3 in Portuguese (ρ = 0.27). The association
+  is not significant in Mathematics after Holm correction.
+- **Interim grades.** G1 and G2 correlate very strongly with G3 (ρ ≈ 0.88–0.96). This
+  is why the `early` scenario matters for Phase 5.
+- **Zero final grades.** All 38 (Mathematics) and 15 (Portuguese) students with G3 = 0
+  have zero recorded absences. Excluding them changes the absences–G3 correlation in
+  Mathematics from ρ = 0.02 to −0.24. This is reported as a sensitivity analysis; no
+  rows are removed.
+
+Methods are in [docs/METHODOLOGY.md §5](docs/METHODOLOGY.md#5-statistical-analysis-phase-4):
+test-selection rules, assumption checks, effect sizes, CIs, multiple-comparison control
+and limitations.
 
 ### Preprocessing (Phase 3)
 
@@ -161,14 +187,14 @@ Selected on experimental evidence, not implemented wholesale.
 .
 ├── backend/
 │   ├── app/            # FastAPI: config, routes, schemas, services
-│   ├── analytics/      # Offline pipeline: data (Phase 2), preprocessing (Phase 3); stats/models later
+│   ├── analytics/      # data (Phase 2), preprocessing (Phase 3), statistics (Phase 4); models later
 │   └── tests/
 ├── frontend/           # Next.js application
 ├── data/               # raw/ and processed/ (git-ignored contents)
 ├── models/             # Trained artifacts (git-ignored)
 ├── notebooks/          # Exploration only
 ├── scripts/            # Developer helpers (check.sh)
-├── docs/               # ARCHITECTURE.md, METHODOLOGY.md, DATA_DICTIONARY.md
+├── docs/               # ARCHITECTURE, METHODOLOGY, DATA_DICTIONARY, STATISTICAL_FINDINGS
 └── PROJECT_ROADMAP.md
 ```
 
@@ -207,6 +233,10 @@ API: <http://localhost:8000/api/v1/health> · Docs: <http://localhost:8000/docs>
 | `GET /dataset/records?cohort=math&page=1&page_size=25&search=teacher` | Paginated records |
 | `GET /dataset/overlap` | Approximate cross-cohort matching |
 | `GET /preprocessing/summary?cohort=math&scenario=early` | Preprocessing quality report for a cohort and scenario |
+| `GET /statistics/hypothesis-tests?cohort=math` | Research questions with tests, adjusted p-values and effect sizes |
+| `GET /statistics/group-comparisons?cohort=math&variable=studytime` | Assumption-checked group comparison |
+| `GET /statistics/{descriptive,distributions,correlations,associations,outliers}?cohort=math` | Other statistical results |
+| `GET /eda/charts?cohort=math` | Chart-ready EDA aggregates |
 
 `cohort` is `math` or `portuguese`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for error codes and limits.
@@ -237,7 +267,7 @@ Runs Ruff, pytest, ESLint, TypeScript, Vitest and a production build.
 | 1 | Foundation & architecture | ✅ Complete |
 | 2 | Real dataset & Data Explorer | ✅ Complete |
 | 3 | Preprocessing & feature engineering | ✅ Complete |
-| 4 | Statistics & exploratory data analysis | Planned |
+| 4 | Statistics & exploratory data analysis | ✅ Complete |
 | 5 | Machine learning & model evaluation | Planned |
 | 6 | Interpretability & academic risk analysis | Planned |
 | 7 | End-to-end backend integration | Planned |

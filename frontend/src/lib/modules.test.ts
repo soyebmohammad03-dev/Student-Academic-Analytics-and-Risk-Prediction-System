@@ -10,7 +10,7 @@ describe("module registry", () => {
 
   it("marks only delivered modules as available", () => {
     const available = allModules.filter((m) => m.status === "available").map((m) => m.key);
-    expect(available).toEqual(["data"]);
+    expect(available).toEqual(["data", "statistics", "eda"]);
   });
 
   it("documents the scope of every module", () => {
