@@ -88,7 +88,7 @@ export function SystemStatus() {
           </IconTile>
         }
         title="Trained models"
-        description="No models have been trained. Training and evaluation begin in Phase 6."
+        description="No models have been trained. Training and evaluation begin in Phase 5."
         trailing={<StatusBadge>None</StatusBadge>}
       />
     </GroupedList>

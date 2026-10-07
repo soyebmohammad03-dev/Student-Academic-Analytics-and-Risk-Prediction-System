@@ -33,3 +33,22 @@ def write_cohort(path: Path, rows: list[dict], columns: list[str] | None = None)
         for row in rows:
             writer.writerow([row.get(c, "") for c in columns])
     return path
+
+
+def make_varied_rows(count: int, seed: int = 0) -> list[dict[str, str | int]]:
+    """Random rows drawn uniformly from each column's documented values/range."""
+    import random
+
+    from analytics.data.dictionary import COLUMNS
+
+    rng = random.Random(seed)
+    rows = []
+    for _ in range(count):
+        row: dict[str, str | int] = {}
+        for spec in COLUMNS:
+            if spec.allowed:
+                row[spec.name] = rng.choice([v.code for v in spec.allowed])
+            else:
+                row[spec.name] = rng.randint(spec.minimum, spec.maximum)
+        rows.append(row)
+    return rows

@@ -50,7 +50,33 @@ classification (UCI lists coded ordinal scales such as `Medu` as numeric).
 - **`G1`**: Known after the first period. Only a legitimate input in scenarios A and B.
 - **`G2`**: Known after the second period. Only a legitimate input in scenario A.
 - **`G3`**: Primary performance target. Never used as an input to predict itself or a label derived from it.
-- **`G3`**: A value of 0 is within the documented range but may indicate a student who did not sit the final evaluation; handling is decided in Phase 5.
+- **`G3`**: A value of 0 is within the documented range but may indicate a student who did not sit the final evaluation. Rows are kept and count as at risk (Phase 3); a sensitivity check is planned for Phase 5.
+
+## Derived targets
+
+Created by `backend/analytics/preprocessing/targets.py`. Outcomes only — never predictors.
+
+| Column | Definition | Task |
+| ------ | ---------- | ---- |
+| `G3` | Final grade, 0–20 (as published) | Regression target |
+| `at_risk` | 1 if `G3` < 10 (below the pass mark), else 0 | Classification target: academic risk, **not** dropout |
+
+## Engineered features
+
+Created by `backend/analytics/preprocessing/features.py`. Row-wise and stateless.
+
+| Feature | Definition | Reason | Leakage assessment |
+| ------- | ---------- | ------ | ------------------ |
+| `has_past_failures` | 1 if failures > 0, else 0. | Most students have no past failures (79% in Mathematics, 85% in Portuguese), so the any-versus-none contrast is the most populated distinction in the variable. The count `failures` is kept alongside it. | None. Past class failures precede the current school year and do not use any grade from it. |
+| `log_absences` | ln(1 + absences). Replaces `absences` in model inputs. | Absences are strongly right-skewed (sample skewness 3.7 in Mathematics, 2.0 in Portuguese; maxima 75 and 32). The log transform reduces the leverage of extreme counts on linear and distance-based models without removing any observation. Tree models are unaffected by this monotonic transform. | Does not use any grade. Caveat: UCI does not document the period over which absences were counted; if they accumulate over the whole year, the value is only partially known at an early-warning point. Stated as a limitation of the early scenario. |
+
+Considered and not added:
+
+- **grade_trend (G2 − G1)**: A linear combination of two inputs that are already present in the full-history scenario; adds collinearity without new information.
+- **parent_max_edu (max of Medu, Fedu)**: Discards information that Medu and Fedu already carry individually.
+- **studytime grouping**: studytime is already a 4-level ordinal code; regrouping it needs statistical evidence from Phase 4 that does not exist yet.
+- **support_count (schoolsup + famsup + paid)**: Adds heterogeneous forms of support as if they were equivalent; the three indicators are kept separately.
+- **alcohol composite (Dalc + Walc)**: No documented scale for combining the two ratings; both are kept as recorded.
 
 ## Grades
 

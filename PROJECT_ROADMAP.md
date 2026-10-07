@@ -5,66 +5,94 @@
 Each phase ends with code review, test verification, a git status check, one
 meaningful commit and a push. Phases are never combined into a single commit.
 
-| Phase | Name                               | Status      |
-| ----- | ---------------------------------- | ----------- |
-| 1     | Project foundation                 | ✅ Complete |
-| 2     | Data layer & Data Explorer         | ✅ Complete |
-| 3     | Statistical analysis               | Planned     |
-| 4     | Exploratory data analysis          | Planned     |
-| 5     | Preprocessing & target formulation | Planned     |
-| 6     | Modelling & model comparison       | Planned     |
-| 7     | Interpretability & risk insights   | Planned     |
-| 8     | Polish, documentation & release    | Planned     |
+| Phase | Name                                        | Status      |
+| ----- | ------------------------------------------- | ----------- |
+| 1     | Foundation & architecture                   | ✅ Complete |
+| 2     | Real dataset & Data Explorer                | ✅ Complete |
+| 3     | Preprocessing & feature engineering         | ✅ Complete |
+| 4     | Statistics & exploratory data analysis      | Planned     |
+| 5     | Machine learning & model evaluation         | Planned     |
+| 6     | Interpretability & academic risk analysis   | Planned     |
+| 7     | End-to-end backend integration              | Planned     |
+| 8     | Complete Apple-style frontend               | Planned     |
+| 9     | Final validation, documentation & presentation readiness | Planned |
 
-## Phase 1 — Project foundation
-Repository structure, documentation, FastAPI skeleton (config, health, project
-metadata), Next.js shell with design system and navigation, linting, tests, Git/GitHub.
+The roadmap was revised to nine phases after Phase 2. Preprocessing now comes before
+statistics so that both statistics and modelling build on the same analytical dataset.
 
-## Phase 2 — Data layer & Data Explorer ✅
-- Scripted, checksum-verified download of the official UCI archive into `data/raw/`.
-- Loader and structured validation: columns, shape, types, allowed codes, ranges,
-  missing values, duplicates. Both official files pass every check.
-- Data dictionary for all 33 attributes (`docs/DATA_DICTIONARY.md`, generated from code).
+## Phase 1 — Foundation & architecture ✅
+- Repository structure and documentation.
+- FastAPI skeleton: config, health and project-metadata endpoints.
+- Next.js shell with the design system and navigation.
+- Linting, tests, Git/GitHub.
+
+## Phase 2 — Real dataset & Data Explorer ✅
+- Checksum-verified download of the official UCI archive.
+- Loader and structured validation. Both official files pass every check.
+- Data dictionary for all 33 attributes.
 - Approximate cross-cohort matching, with its assumptions stated.
-- API: `/dataset/summary`, `/schema`, `/quality`, `/records` (paginated, searchable), `/overlap`.
-- Frontend: Data Explorer with cohort switch, overview, plain-language quality report,
-  searchable paginated table, dictionary, and loading, empty and error states.
+- Dataset API: summary, schema, quality, records, overlap.
+- Functional Data Explorer page.
 
-## Phase 3 — Statistical analysis
-- Descriptive statistics for every attribute.
-- Normality and variance-homogeneity checks to choose parametric vs non-parametric tests.
+## Phase 3 — Preprocessing & feature engineering ✅
+- `backend/analytics/preprocessing/`: raw → validated → analytical data layers. No
+  rows removed and the raw files are never written.
+- Targets: `G3` (regression) and `at_risk = G3 < 10` (classification, academic risk;
+  not dropout).
+- Leakage-aware feature scenarios: `full_history` (G1+G2), `mid_year` (G1) and
+  `early` (no grades). A `ScenarioGuard` makes it impossible to mix them.
+- scikit-learn `Pipeline`/`ColumnTransformer`:
+  - one-hot encoding for binary and nominal variables, with categories fixed by the
+    dictionary;
+  - documented ordinal codes kept;
+  - optional scaling;
+  - training-set imputation.
+- Two justified engineered features: `has_past_failures` and `log_absences`. Rejected
+  candidates are documented with reasons.
+- Reproducible stratified 80/20 split (`random_state=42`), shared by both tasks.
+- Preprocessing quality report and `GET /api/v1/preprocessing/summary`.
+
+## Phase 4 — Statistics & exploratory data analysis
+- Descriptive statistics for every attribute, on the analytical dataset.
+- Normality and variance-homogeneity checks to choose parametric or non-parametric tests.
 - Pearson/Spearman correlations with p-values.
-- t-test/Mann–Whitney, ANOVA/Kruskal–Wallis, chi-square/Fisher with effect sizes and
-  multiple-comparison correction.
-- API + Statistical Analysis page.
+- t-test/Mann–Whitney, ANOVA/Kruskal–Wallis and chi-square/Fisher, with effect sizes
+  and multiple-comparison correction.
+- Univariate, bivariate and multivariate EDA, outlier analysis and performance
+  profiling. Focus: study time, absences, failures, grades, parental education,
+  support, and demographic and social factors.
+- Statistical Analysis and EDA pages.
 
-## Phase 4 — Exploratory data analysis
-- Univariate, bivariate and multivariate views; correlation heatmap; outlier analysis.
-- Focus factors: study time, absences, failures, G1/G2/G3, parental education,
-  family/school support, demographic and social factors.
-- Academic-performance profiling.
-- API + EDA page with a restrained, consistent chart system.
+## Phase 5 — Machine learning & model evaluation
+- Baselines: mean predictor and majority class.
+- Regression candidates: Linear (regularised), Decision Tree, Random Forest.
+- Classification candidates: Logistic Regression, Decision Tree, Random Forest, KNN
+  and SVM. Each is retained only where the evidence supports it.
+- Every model is a `Pipeline(build_preprocessor(scenario), estimator)`, run with
+  stratified CV on the training split and tuned only where justified. The held-out
+  test split is used once.
+- Metrics:
+  - regression: MAE, MSE, RMSE, R²;
+  - classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix.
+- Results reported per cohort and per scenario.
+- A sensitivity check on `G3 = 0` rows.
+- Persisted artifacts with metadata.
 
-## Phase 5 — Preprocessing & target formulation
-- Final decision on risk threshold and `G3 = 0` handling, documented in `docs/METHODOLOGY.md`.
-- Feature scenarios A / B / C (with G1+G2, G1 only, no grades).
-- Reproducible scikit-learn preprocessing pipelines; engineered features.
-- Leakage tests asserting that `G3` never appears as an input.
+## Phase 6 — Interpretability & academic risk analysis
+- Permutation importance, partial dependence and per-prediction explanations.
+- Risk-factor summaries by student group, with uncertainty communicated.
+  Associations only, no causal claims.
 
-## Phase 6 — Modelling & model comparison
-- Baselines (mean predictor, majority class).
-- Regression: Linear, Decision Tree, Random Forest.
-- Classification: candidates from Logistic Regression, Decision Tree, Random Forest,
-  KNN, SVM — retained only where evidence supports them.
-- Stratified cross-validation, hyperparameter tuning where justified, held-out test.
-- Persisted artifacts with metadata; Model Comparison page.
+## Phase 7 — End-to-end backend integration
+- Statistics, model and prediction endpoints, with model loading and input validation.
+- Consistent error handling and performance checks.
 
-## Phase 7 — Interpretability & risk insights
-- Permutation importance and partial dependence; per-prediction explanations.
-- Prediction API with input validation; Prediction and Risk Analysis pages.
-- Clear communication of uncertainty and of which scenario a prediction uses.
+## Phase 8 — Complete Apple-style frontend
+- Statistical Analysis, EDA, Model Comparison, Prediction and Risk Analysis pages.
+- A consistent chart system, accessibility and a responsive review.
 
-## Phase 8 — Polish, documentation & release
-- Accessibility and responsive review, performance, error states.
-- Final README, methodology write-up, screenshots, limitations and ethics section.
-- Optional deployment.
+## Phase 9 — Final validation, documentation & presentation readiness
+- End-to-end verification and a reproducibility check from a clean clone.
+- Final README and methodology write-up, screenshots, and a limitations and ethics
+  section.
+- Presentation material.

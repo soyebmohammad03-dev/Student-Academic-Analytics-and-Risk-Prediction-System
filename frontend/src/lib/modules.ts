@@ -46,7 +46,7 @@ export const analysisModules: AppModule[] = [
     title: "Statistical Analysis",
     href: "/statistics",
     icon: Sigma,
-    phase: 3,
+    phase: 4,
     status: "planned",
     summary: "Descriptive, correlational and inferential statistics with effect sizes.",
     scope: [
@@ -81,13 +81,13 @@ export const modellingModules: AppModule[] = [
     title: "Prediction",
     href: "/prediction",
     icon: Crosshair,
-    phase: 7,
+    phase: 6,
     status: "planned",
     summary: "Predict final grade and academic risk under clearly stated input scenarios.",
     scope: [
       "Validated input form for a single student profile",
       "Grade (regression) and academic-risk (classification) outputs",
-      "Explicit scenario selection: with G1+G2, G1 only, or no prior grades",
+      "Explicit scenario selection: full history (G1+G2), mid-year (G1) or early (no grades)",
       "Per-prediction explanation of contributing factors",
     ],
   },
@@ -96,7 +96,7 @@ export const modellingModules: AppModule[] = [
     title: "Model Comparison",
     href: "/model-comparison",
     icon: GitCompareArrows,
-    phase: 6,
+    phase: 5,
     status: "planned",
     summary: "Cross-validated comparison of candidate models against simple baselines.",
     scope: [
@@ -111,7 +111,7 @@ export const modellingModules: AppModule[] = [
     title: "Risk Analysis",
     href: "/risk-analysis",
     icon: ShieldAlert,
-    phase: 7,
+    phase: 6,
     status: "planned",
     summary: "Interpretable insight into which factors are associated with academic risk.",
     scope: [

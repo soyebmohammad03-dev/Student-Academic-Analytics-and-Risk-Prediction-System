@@ -2,9 +2,10 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import dataset, health, project
+from app.api.routes import dataset, health, preprocessing, project
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["system"])
 api_router.include_router(project.router, tags=["project"])
 api_router.include_router(dataset.router, tags=["dataset"])
+api_router.include_router(preprocessing.router, tags=["preprocessing"])

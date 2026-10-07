@@ -42,7 +42,8 @@
 | `app/services/`         | Orchestration between routes and analytics      |
 | `app/api/errors.py`     | Consistent `{code, detail}` error bodies        |
 | `analytics/data/`       | Dataset acquisition, loading, validation, dictionary, cohort overlap |
-| `analytics/` (other)    | Statistics, EDA, preprocessing, modelling (Phase 3+) |
+| `analytics/preprocessing/` | Targets, feature scenarios, leakage guards, sklearn preprocessor, split, report (Phase 3) |
+| `analytics/` (other)    | Statistics/EDA (Phase 4), modelling (Phase 5) |
 
 ## Data layer (Phase 2)
 
@@ -79,6 +80,32 @@ UCI archive ──download.py──▶ data/raw/*.csv ──loader.py──▶ L
 | `src/lib/`               | Module registry, typed API client, `useApi` fetch hook |
 | `src/app/globals.css`    | Design tokens (colour, type, radius, elevation) for light and dark themes |
 
+## Preprocessing layer (Phase 3)
+
+```
+LoadedCohort + ValidationReport
+        │ prepare_cohort()            (refuses a cohort that failed validation)
+        ▼
+AnalyticalDataset ── raw (untouched) · validated · analytical (+ engineered, G3, at_risk)
+        │
+        ├─ features(scenario) ─▶ FeatureMatrix(scenario, X)     outcomes never included
+        ├─ regression_target() / risk_target()
+        └─ split(scenario) ────▶ Split(X_train, X_test, y_*_regression, y_*_risk)
+                                   stratified on at_risk, random_state=42, shared by tasks
+
+build_preprocessor(scenario, scale_numeric) ─▶ unfitted Pipeline
+        ScenarioGuard  →  ColumnTransformer(binary OHE | nominal OHE | ordinal | numeric | indicator)
+
+build_report(dataset, scenario) ─▶ PreprocessingReport (fits the preprocessor on train only)
+```
+
+Phase 5 composes `Pipeline([("prep", build_preprocessor(s)), ("model", estimator)])`
+and fits it on `split.X_train`. Training stays offline; the API only reads metadata.
+
+`app/services/preprocessing.py` builds each report once per cohort version, reusing
+the `DatasetStore` cache, and exposes it through a single metadata endpoint. The
+frontend does not depend on it in this phase.
+
 ## API (current)
 
 All paths are under `/api/v1`. `cohort` is required where listed and must be `math`
@@ -93,10 +120,11 @@ or `portuguese`.
 | GET    | `/dataset/quality` | `cohort` | Validation checks, observations, columns with issues |
 | GET    | `/dataset/records` | `cohort`, `page` (≥1), `page_size` (1–100, default 25), `search` (≤100 chars) | Paginated raw records; `row` is the 1-based file position, not an ID |
 | GET    | `/dataset/overlap` | — | Approximate cross-cohort matching with its assumptions |
+| GET    | `/preprocessing/summary` | `cohort`, `scenario` (`full_history` \| `mid_year` \| `early`, default `early`) | Shapes, feature groups, encoded features (fitted on train), engineered features, excluded columns and why, missing-value handling, target and risk distributions, outliers, split |
 
 Errors use one shape, `{"code": "...", "detail": "..."}`:
 
 | Status | `code` | When |
 | ------ | ------ | ---- |
-| 422 | `invalid_request` | Unknown cohort, missing cohort, page or page size out of range, search too long |
+| 422 | `invalid_request` | Unknown cohort or scenario, missing cohort, page or page size out of range, search too long |
 | 503 | `dataset_unavailable` | Dataset files not downloaded; `detail` gives the command |

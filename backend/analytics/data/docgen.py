@@ -40,6 +40,7 @@ def to_markdown() -> str:
     for spec in COLUMNS:
         for note in spec.notes:
             lines.append(f"- **`{spec.name}`**: {note}")
+    lines += _derived_sections()
     lines += [
         "",
         "## Grades",
@@ -53,6 +54,43 @@ def to_markdown() -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def _derived_sections() -> list[str]:
+    # Imported here: preprocessing depends on the dictionary, not the other way round.
+    from analytics.preprocessing import (
+        ENGINEERED_FEATURES,
+        REJECTED_FEATURES,
+        RISK_LABEL,
+        RISK_THRESHOLD,
+    )
+
+    lines = [
+        "",
+        "## Derived targets",
+        "",
+        "Created by `backend/analytics/preprocessing/targets.py`. "
+        "Outcomes only — never predictors.",
+        "",
+        "| Column | Definition | Task |",
+        "| ------ | ---------- | ---- |",
+        "| `G3` | Final grade, 0–20 (as published) | Regression target |",
+        f"| `{RISK_LABEL}` | 1 if `G3` < {RISK_THRESHOLD} (below the pass mark), else 0 | "
+        "Classification target: academic risk, **not** dropout |",
+        "",
+        "## Engineered features",
+        "",
+        "Created by `backend/analytics/preprocessing/features.py`. Row-wise and stateless.",
+        "",
+        "| Feature | Definition | Reason | Leakage assessment |",
+        "| ------- | ---------- | ------ | ------------------ |",
+    ]
+    for f in ENGINEERED_FEATURES:
+        replaces = f" Replaces `{f.replaces}` in model inputs." if f.replaces else ""
+        lines.append(f"| `{f.name}` | {f.definition}{replaces} | {f.reason} | {f.leakage} |")
+    lines += ["", "Considered and not added:", ""]
+    lines += [f"- **{name}**: {reason}" for name, reason in REJECTED_FEATURES]
+    return lines
 
 
 if __name__ == "__main__":  # pragma: no cover

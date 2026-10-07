@@ -5,11 +5,12 @@ of student data, through **exploratory analytics** and **reproducible preprocess
 to a **comparison of machine-learning models** that predict academic performance and
 identify **academic risk** — presented through a modern, interpretable web application.
 
-> **Status: Phase 2 of 8 complete — validated data layer and Data Explorer.** The
-> official UCI dataset can be downloaded and verified with one command, both cohorts
-> pass validation, and the Data Explorer serves the real records. No statistical
-> analysis has been run and no model has been trained yet; those modules are marked
-> as planned. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
+> **Status: Phase 3 of 9 complete — leakage-safe preprocessing and feature
+> engineering.** The official UCI dataset is downloaded, verified and validated. The
+> Data Explorer serves the real records. A reproducible scikit-learn preprocessing
+> pipeline provides targets, scenario-specific feature matrices and stratified splits.
+> No statistical analysis has been run and no model has been trained yet; those
+> modules are marked as planned. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
 
 ISPA undergraduate AI / Data Analytics project.
 
@@ -76,8 +77,8 @@ Business Technology Conference (FUBUTEC 2008), pp. 5–12. Porto, Portugal: EURO
 ## Proposed methodology
 
 ```
-Student data → Statistical analysis → Exploratory analysis → Preprocessing &
-feature engineering → Model training → Evaluation & comparison → Interpretable
+Student data → Validation → Preprocessing & feature engineering → Statistical
+analysis & EDA → Model training → Evaluation & comparison → Interpretable
 academic-risk insights → Web application
 ```
 
@@ -85,7 +86,7 @@ academic-risk insights → Web application
 | ----- | --------------- |
 | Statistical analysis | Mean, median, mode, variance, SD, range, quartiles, distribution shape; Pearson/Spearman correlation with significance; t-test, ANOVA, chi-square, and non-parametric alternatives (Mann–Whitney, Kruskal–Wallis) when assumptions fail; effect sizes |
 | Exploratory analysis | Univariate, bivariate and multivariate analysis; histograms, box plots, bar charts, scatter plots, correlation heatmaps; outliers; group comparisons; performance profiling |
-| Preprocessing | Encoding, scaling, feature engineering fitted inside training folds only |
+| Preprocessing (implemented) | Targets, leakage-aware feature scenarios, one-hot/ordinal encoding with fixed categories, two justified engineered features, training-only imputation/scaling, stratified reproducible split |
 | Modelling | Regression and classification candidates compared with cross-validation |
 | Interpretation | Model-agnostic feature importance and per-prediction explanations |
 
@@ -93,12 +94,41 @@ academic-risk insights → Web application
 
 Defined before any training — full detail in [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
-- **Regression target:** `G3`. **Classification target:** `at_risk = G3 < 10`
-  (below the pass mark; threshold to be confirmed in Phase 5).
-- `G3` is **never** used as an input to predict `G3` or a label derived from it.
-- `G1`/`G2` are only used when the prediction scenario legitimately has them. Results
-  are reported under three scenarios: **A** (with G1 + G2), **B** (with G1),
-  **C** (no prior grades — early warning).
+- **Regression target:** `G3`, the final grade (0–20).
+- **Classification target:** `at_risk = 1 if G3 < 10`, below the pass mark. This is
+  academic risk, not dropout. On the official data, 130 of 395 Mathematics students
+  (32.9%) and 100 of 649 Portuguese students (15.4%) are at risk.
+- `G3` and `at_risk` are **never** predictors. The code rejects them.
+- `G1`/`G2` are only used when the prediction scenario legitimately has them:
+
+  | Scenario | Inputs | Use |
+  | -------- | ------ | --- |
+  | `full_history` | non-grade attributes + G1 + G2 | late-year prediction |
+  | `mid_year` | non-grade attributes + G1 | after the first period |
+  | `early` | non-grade attributes only | early warning |
+
+  A `ScenarioGuard` at the start of every preprocessor rejects any feature set that
+  doesn't match its scenario. Neither end of the range is "better": `full_history`
+  shows how predictable grades are once interim grades exist, and `early` shows what
+  is knowable before any grade.
+
+### Preprocessing (Phase 3)
+
+`backend/analytics/preprocessing/` turns a validated cohort into an analytical dataset
+without removing rows or touching the raw files.
+
+- **Encoding.** Binary categories become a single 0/1 column. Nominal categories (jobs,
+  reason, guardian) are fully one-hot encoded. UCI's ordered codes (education, study
+  time, ratings) are kept as ordinal integers.
+- **Engineered features.** Two are added: `has_past_failures` and `log_absences`.
+  Each has a documented reason and leakage assessment.
+- **Training-only fitting.** Imputation and scaling are learned only on training data,
+  inside a scikit-learn `Pipeline`.
+- **Split.** 80/20, stratified on `at_risk`, `random_state=42`: Mathematics 316/79,
+  Portuguese 519/130.
+
+Details are in [docs/METHODOLOGY.md §4](docs/METHODOLOGY.md#4-preprocessing-phase-3)
+and [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 
 ### Planned models
 
@@ -131,7 +161,7 @@ Selected on experimental evidence, not implemented wholesale.
 .
 ├── backend/
 │   ├── app/            # FastAPI: config, routes, schemas, services
-│   ├── analytics/      # Offline pipeline: data layer (Phase 2); statistics, EDA, modelling (later)
+│   ├── analytics/      # Offline pipeline: data (Phase 2), preprocessing (Phase 3); stats/models later
 │   └── tests/
 ├── frontend/           # Next.js application
 ├── data/               # raw/ and processed/ (git-ignored contents)
@@ -176,6 +206,7 @@ API: <http://localhost:8000/api/v1/health> · Docs: <http://localhost:8000/docs>
 | `GET /dataset/quality?cohort=math` | Validation checks and observations |
 | `GET /dataset/records?cohort=math&page=1&page_size=25&search=teacher` | Paginated records |
 | `GET /dataset/overlap` | Approximate cross-cohort matching |
+| `GET /preprocessing/summary?cohort=math&scenario=early` | Preprocessing quality report for a cohort and scenario |
 
 `cohort` is `math` or `portuguese`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for error codes and limits.
@@ -203,14 +234,15 @@ Runs Ruff, pytest, ESLint, TypeScript, Vitest and a production build.
 
 | Phase | Scope | Status |
 | ----- | ----- | ------ |
-| 1 | Project foundation | ✅ Complete |
-| 2 | Data layer & Data Explorer | ✅ Complete |
-| 3 | Statistical analysis | Planned |
-| 4 | Exploratory data analysis | Planned |
-| 5 | Preprocessing & target formulation | Planned |
-| 6 | Modelling & model comparison | Planned |
-| 7 | Interpretability & risk insights | Planned |
-| 8 | Polish, documentation & release | Planned |
+| 1 | Foundation & architecture | ✅ Complete |
+| 2 | Real dataset & Data Explorer | ✅ Complete |
+| 3 | Preprocessing & feature engineering | ✅ Complete |
+| 4 | Statistics & exploratory data analysis | Planned |
+| 5 | Machine learning & model evaluation | Planned |
+| 6 | Interpretability & academic risk analysis | Planned |
+| 7 | End-to-end backend integration | Planned |
+| 8 | Complete Apple-style frontend | Planned |
+| 9 | Final validation, documentation & presentation readiness | Planned |
 
 ## Licence
 

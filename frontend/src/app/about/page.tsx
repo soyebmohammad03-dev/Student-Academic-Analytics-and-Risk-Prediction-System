@@ -29,9 +29,9 @@ const pipeline = [
 ] as const;
 
 const scenarios = [
-  ["A", "Non-grade attributes + G1 + G2", "Late-year prediction"],
-  ["B", "Non-grade attributes + G1", "Mid-year prediction"],
-  ["C", "Non-grade attributes only", "Early warning"],
+  ["Full history", "Non-grade attributes + G1 + G2", "Late-year prediction"],
+  ["Mid-year", "Non-grade attributes + G1", "After the first period"],
+  ["Early", "Non-grade attributes only", "Early warning, before any grade"],
 ] as const;
 
 const stack = [
@@ -115,7 +115,9 @@ export default function AboutPage() {
               <dt className="text-[12px] font-medium text-text-tertiary">Classification target</dt>
               <dd className="mt-1 text-text">
                 Academic risk: G3 below the pass mark of 10{" "}
-                <span className="text-text-secondary">(threshold confirmed in Phase 5)</span>
+                <span className="text-text-secondary">
+                  (fixed in the Phase 3 preprocessing pipeline)
+                </span>
               </dd>
             </div>
           </dl>
@@ -136,7 +138,7 @@ export default function AboutPage() {
               <tbody className="divide-y divide-separator">
                 {scenarios.map(([id, inputs, represents]) => (
                   <tr key={id}>
-                    <td className="px-4 py-2.5 font-semibold text-text">{id}</td>
+                    <td className="px-4 py-2.5 font-semibold whitespace-nowrap text-text">{id}</td>
                     <td className="px-4 py-2.5 text-text">{inputs}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{represents}</td>
                   </tr>

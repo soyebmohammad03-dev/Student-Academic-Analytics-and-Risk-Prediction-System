@@ -11,11 +11,11 @@ import { site } from "@/lib/site";
 
 const workflow = [
   { step: "Data", detail: "Validated cohorts", phase: 2 },
-  { step: "Statistics", detail: "Descriptive & inferential", phase: 3 },
+  { step: "Preprocessing", detail: "Targets & features", phase: 3 },
+  { step: "Statistics", detail: "Descriptive & inferential", phase: 4 },
   { step: "Exploration", detail: "Patterns & profiles", phase: 4 },
-  { step: "Preprocessing", detail: "Targets & features", phase: 5 },
-  { step: "Modelling", detail: "Compare & evaluate", phase: 6 },
-  { step: "Insight", detail: "Interpretable risk", phase: 7 },
+  { step: "Modelling", detail: "Compare & evaluate", phase: 5 },
+  { step: "Insight", detail: "Interpretable risk", phase: 6 },
 ];
 
 export default function DashboardPage() {

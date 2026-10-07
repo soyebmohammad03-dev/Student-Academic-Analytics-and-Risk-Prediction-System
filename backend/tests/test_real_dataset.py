@@ -26,3 +26,24 @@ def test_official_overlap_reproduces_uci_join_count():
 
     assert report.join_pairs == 382  # the figure quoted in UCI's student.txt
     assert report.unambiguous_matches <= report.join_pairs
+
+
+@pytest.mark.parametrize(
+    ("cohort", "at_risk", "train", "test"),
+    [(Cohort.MATH, 130, 316, 79), (Cohort.PORTUGUESE, 100, 519, 130)],
+)
+def test_official_preprocessing(cohort, at_risk, train, test):
+    import hashlib
+
+    from analytics.data import COHORTS
+    from analytics.preprocessing import Scenario, build_report, prepare_cohort
+
+    path = DEFAULT_RAW_DIR / COHORTS[cohort].filename
+    dataset = prepare_cohort(load_cohort(DEFAULT_RAW_DIR, cohort))
+    encoded = {s: len(build_report(dataset, s).encoded_feature_names) for s in Scenario}
+
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == COHORTS[cohort].sha256
+    assert int(dataset.risk_target().sum()) == at_risk
+    assert encoded == {Scenario.FULL_HISTORY: 46, Scenario.MID_YEAR: 45, Scenario.EARLY: 44}
+    split = dataset.split(Scenario.EARLY)
+    assert (len(split.X_train), len(split.X_test)) == (train, test)

@@ -464,7 +464,8 @@ COLUMNS: tuple[ColumnSpec, ...] = (
             "Primary performance target. Never used as an input to predict itself or a "
             "label derived from it.",
             "A value of 0 is within the documented range but may indicate a student who "
-            "did not sit the final evaluation; handling is decided in Phase 5.",
+            "did not sit the final evaluation. Rows are kept and count as at risk "
+            "(Phase 3); a sensitivity check is planned for Phase 5.",
         ),
     ),
 )
