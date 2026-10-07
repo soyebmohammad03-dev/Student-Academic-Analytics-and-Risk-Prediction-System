@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { SystemStatus } from "@/components/status/SystemStatus";
 import { GroupedList, IconTile, ListRow } from "@/components/ui/GroupedList";
 import { Section } from "@/components/ui/Section";
-import { PhaseBadge } from "@/components/ui/StatusBadge";
+import { PhaseBadge, StatusBadge } from "@/components/ui/StatusBadge";
 import { allModules } from "@/lib/modules";
 import { site } from "@/lib/site";
 
@@ -73,7 +73,10 @@ export default function DashboardPage() {
       </Section>
 
       <div className="grid gap-12 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] xl:gap-8">
-        <Section title="Modules" description="All modules are planned; none contain results yet.">
+        <Section
+          title="Modules"
+          description="Modules show results only once their phase is complete."
+        >
           <GroupedList>
             {allModules.map((m) => (
               <ListRow
@@ -86,7 +89,13 @@ export default function DashboardPage() {
                 }
                 title={m.title}
                 description={m.summary}
-                trailing={<PhaseBadge phase={m.phase} />}
+                trailing={
+                  m.status === "available" ? (
+                    <StatusBadge tone="positive">Available</StatusBadge>
+                  ) : (
+                    <PhaseBadge phase={m.phase} />
+                  )
+                }
               />
             ))}
           </GroupedList>

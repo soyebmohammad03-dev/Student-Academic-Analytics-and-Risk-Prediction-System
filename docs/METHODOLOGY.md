@@ -18,7 +18,30 @@ Its contribution is an integrated, reproducible workflow — statistics → EDA 
 preprocessing → model comparison → interpretable risk insights — delivered as a
 working system.
 
-## 2. Pipeline
+## 2. Data validation strategy
+
+Implemented in Phase 2 (`backend/analytics/data/`). Every cohort file is checked
+against the data dictionary, which follows UCI's `student.txt` notes:
+
+| Check | Rule | Severity if broken |
+| ----- | ---- | ------------------ |
+| Columns | Exactly the 33 documented columns | fail (missing/extra), warning (order) |
+| Shape | Row count equals the published file (395 / 649) | warning |
+| Missing values | No empty cells | fail |
+| Duplicates | No row identical to another across all 33 attributes | warning (rows kept: without an ID they may be distinct students) |
+| Yes/no fields | Only `yes` / `no` | fail |
+| Category codes | Only documented codes (e.g. `Mjob` ∈ teacher, health, services, at_home, other) | fail |
+| Grades | `G1`, `G2`, `G3` integers in 0–20 | fail |
+| Coded scales | `Medu`/`Fedu` 0–4, `traveltime`/`studytime` 1–4, ratings 1–5 | fail |
+| Counts | `age` 15–22, `failures` 0–4, `absences` 0–93, integers only | fail |
+
+Integrity is also checked before loading: each CSV must match a pinned SHA-256.
+
+Validation reports and never deletes. Outliers that are within the documented range,
+such as high absence counts or `G3 = 0`, are valid data. They are kept and, where
+relevant, reported as observations. Both official files pass every check.
+
+## 3. Pipeline
 
 1. **Data validation** — load both cohorts, verify schema, types, ranges and duplicates.
 2. **Descriptive statistics** — central tendency, dispersion, quartiles, distribution shape.
@@ -35,11 +58,11 @@ working system.
 7. **Modelling** — compare candidate models with cross-validation; tune where justified.
 8. **Evaluation & interpretation** — held-out metrics, then model-agnostic explanation.
 
-## 3. Target definition and leakage rules
+## 4. Target definition and leakage rules
 
 These rules are binding for every prediction experiment.
 
-### 3.1 Targets
+### 4.1 Targets
 
 | Task           | Target                                                       |
 | -------------- | ------------------------------------------------------------ |
@@ -49,7 +72,12 @@ These rules are binding for every prediction experiment.
 The exact threshold is a documented design choice and will be revisited in Phase 5
 after inspecting the grade distribution.
 
-### 3.2 Leakage rules
+**Why `G3`.** `G3` is the final-year grade, the outcome the school actually records,
+and the attribute UCI designates as the output target. `G1` and `G2` are interim
+grades from the same year: they measure the same construct earlier, so they are
+treated as *prior grades* (time-dependent inputs), never as targets.
+
+### 4.2 Leakage rules
 
 - `G3` (and anything derived from it) is **never** an input feature for a model whose
   target is `G3` or `at_risk`.
@@ -69,17 +97,24 @@ after inspecting the grade distribution.
   cross-validation folds.
 - Students appearing in both the Mathematics and Portuguese files are not split across
   train and test sets when cohorts are combined. By default the cohorts are modelled
-  separately.
+  separately. Because the data has no student ID, cross-cohort matching uses UCI's
+  13-attribute profile and is approximate. On the official files UCI's join produces
+  382 pairs, but only 358 profiles are unique in both files (see `data/README.md`).
 - Records with `G3 = 0` are investigated before modelling (they may indicate students
   who did not sit the final assessment) and the handling decision is documented.
 
-### 3.3 Terminology
+### 4.3 Terminology
 
 The dataset has **no dropout label**. The system predicts *academic performance* and
 *academic risk* (risk of failing the final assessment). It must not be described as
 dropout prediction unless a dataset with a genuine dropout outcome is added.
 
-## 4. Evaluation
+Dropout is not claimed because the data records only enrolled students' attributes
+and grades. Nothing indicates whether a student later left school. A low or zero
+`G3` is a performance outcome, and treating it as dropout would be an unsupported
+inference.
+
+## 5. Evaluation
 
 - Regression: MAE, MSE, RMSE, R².
 - Classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix. Because

@@ -21,7 +21,7 @@ export interface AppModule {
   phase: number;
   status: ModuleStatus;
   summary: string;
-  /** Scope planned for the module, mirrored from PROJECT_ROADMAP.md. */
+  /** Scope of the module, mirrored from PROJECT_ROADMAP.md. */
   scope: string[];
 }
 
@@ -32,7 +32,7 @@ export const analysisModules: AppModule[] = [
     href: "/data-explorer",
     icon: Table2,
     phase: 2,
-    status: "planned",
+    status: "available",
     summary: "Browse both student cohorts with a validated schema and attribute dictionary.",
     scope: [
       "Checksum-verified download of the UCI dataset",

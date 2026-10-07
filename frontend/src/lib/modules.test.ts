@@ -8,11 +8,12 @@ describe("module registry", () => {
     expect(new Set(allModules.map((m) => m.href)).size).toBe(allModules.length);
   });
 
-  it("does not mark any module as available before it is built", () => {
-    expect(allModules.every((m) => m.status === "planned")).toBe(true);
+  it("marks only delivered modules as available", () => {
+    const available = allModules.filter((m) => m.status === "available").map((m) => m.key);
+    expect(available).toEqual(["data"]);
   });
 
-  it("documents planned scope for every module", () => {
+  it("documents the scope of every module", () => {
     for (const m of allModules) expect(m.scope.length).toBeGreaterThan(0);
   });
 

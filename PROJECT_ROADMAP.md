@@ -8,7 +8,7 @@ meaningful commit and a push. Phases are never combined into a single commit.
 | Phase | Name                               | Status      |
 | ----- | ---------------------------------- | ----------- |
 | 1     | Project foundation                 | ✅ Complete |
-| 2     | Data layer & Data Explorer         | Planned     |
+| 2     | Data layer & Data Explorer         | ✅ Complete |
 | 3     | Statistical analysis               | Planned     |
 | 4     | Exploratory data analysis          | Planned     |
 | 5     | Preprocessing & target formulation | Planned     |
@@ -20,13 +20,15 @@ meaningful commit and a push. Phases are never combined into a single commit.
 Repository structure, documentation, FastAPI skeleton (config, health, project
 metadata), Next.js shell with design system and navigation, linting, tests, Git/GitHub.
 
-## Phase 2 — Data layer & Data Explorer
-- Scripted, checksum-verified download of the UCI dataset into `data/raw/`.
-- Loader with schema validation (types, allowed values, ranges, missing values, duplicates).
-- Data dictionary for all 33 attributes.
-- Detection of students present in both cohorts.
-- API: dataset summary, schema, paginated records.
-- Frontend: Data Explorer (searchable table, attribute dictionary, cohort switch).
+## Phase 2 — Data layer & Data Explorer ✅
+- Scripted, checksum-verified download of the official UCI archive into `data/raw/`.
+- Loader and structured validation: columns, shape, types, allowed codes, ranges,
+  missing values, duplicates. Both official files pass every check.
+- Data dictionary for all 33 attributes (`docs/DATA_DICTIONARY.md`, generated from code).
+- Approximate cross-cohort matching, with its assumptions stated.
+- API: `/dataset/summary`, `/schema`, `/quality`, `/records` (paginated, searchable), `/overlap`.
+- Frontend: Data Explorer with cohort switch, overview, plain-language quality report,
+  searchable paginated table, dictionary, and loading, empty and error states.
 
 ## Phase 3 — Statistical analysis
 - Descriptive statistics for every attribute.

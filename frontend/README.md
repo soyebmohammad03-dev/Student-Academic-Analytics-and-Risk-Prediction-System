@@ -7,11 +7,12 @@ Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 web interface for the
 src/
 ├── app/                 # Routes: one folder per module, plus layout and design tokens
 ├── components/
+│   ├── data-explorer/   # Data Explorer module
 │   ├── layout/          # App shell, navigation, page header, brand
 │   ├── status/          # Live backend status
 │   ├── theme/           # Light / dark / system appearance
 │   └── ui/              # Design-system primitives (grouped lists, sections, badges)
-└── lib/                 # Module registry, API client, site metadata
+└── lib/                 # Module registry, typed API client, useApi hook, site metadata
 ```
 
 ## Design system

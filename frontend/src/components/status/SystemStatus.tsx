@@ -66,7 +66,7 @@ export function SystemStatus() {
           state.kind === "online"
             ? state.project.dataset.available_locally
               ? "Both cohort files found in data/raw."
-              : "Not yet downloaded. Scripted download arrives in Phase 2."
+              : "Not downloaded. Run python -m analytics.data.download in backend/."
             : "Status is reported by the API."
         }
         trailing={

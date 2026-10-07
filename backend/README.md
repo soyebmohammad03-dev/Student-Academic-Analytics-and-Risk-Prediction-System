@@ -11,7 +11,8 @@ backend/
 │   ├── api/          # Routers and route modules
 │   ├── schemas/      # Pydantic request/response models
 │   └── services/     # Adapters between routes and the analytics package
-├── analytics/        # Offline pipeline: statistics, EDA, preprocessing, modelling (Phase 2+)
+├── analytics/
+│   └── data/         # Download, loading, validation, data dictionary, cohort overlap
 └── tests/
 ```
 
@@ -26,6 +27,13 @@ uv venv --python 3.12 .venv     # or: python3.12 -m venv .venv
 source .venv/bin/activate
 uv pip install -e ".[dev]"      # or: pip install -e ".[dev]"
 cp .env.example .env   # optional
+python -m analytics.data.download   # download + verify the UCI dataset into ../data/raw
+```
+
+Re-generate the data dictionary document after changing `analytics/data/dictionary.py`:
+
+```bash
+python -m analytics.data.docgen
 ```
 
 ## Run

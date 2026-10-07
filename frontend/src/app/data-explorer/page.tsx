@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { ModulePlaceholder } from "@/components/ModulePlaceholder";
-import { getModule } from "@/lib/modules";
+import { DataExplorer } from "@/components/data-explorer/DataExplorer";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-const appModule = getModule("data");
-
-export const metadata: Metadata = { title: appModule.title };
+export const metadata: Metadata = { title: "Data Explorer" };
 
 export default function DataExplorerPage() {
-  return <ModulePlaceholder module={appModule} />;
+  return (
+    // The explorer reads ?cohort= from the URL, so it renders on the client.
+    <Suspense
+      fallback={
+        <div className="space-y-6" aria-busy="true">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
+        </div>
+      }
+    >
+      <DataExplorer />
+    </Suspense>
+  );
 }

@@ -5,10 +5,11 @@ of student data, through **exploratory analytics** and **reproducible preprocess
 to a **comparison of machine-learning models** that predict academic performance and
 identify **academic risk** — presented through a modern, interpretable web application.
 
-> **Status: Phase 1 of 8 — project foundation.** The architecture, design system,
-> API skeleton and documentation are in place. No analysis has been run and no model
-> has been trained yet; every analytics module in the interface is marked as planned.
-> See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
+> **Status: Phase 2 of 8 complete — validated data layer and Data Explorer.** The
+> official UCI dataset can be downloaded and verified with one command, both cohorts
+> pass validation, and the Data Explorer serves the real records. No statistical
+> analysis has been run and no model has been trained yet; those modules are marked
+> as planned. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
 
 ISPA undergraduate AI / Data Analytics project.
 
@@ -39,12 +40,28 @@ any individual technique.
 
 ## Dataset
 
-**UCI Student Performance** — <https://archive.ics.uci.edu/dataset/320/student+performance>
-(CC BY 4.0). Two Portuguese secondary-school cohorts (Mathematics, 395 students;
-Portuguese, 649 students) with 33 attributes each, including demographics, family
-background, study time, absences, past failures, social behaviour and three period
-grades `G1`, `G2`, `G3` (0–20). Data files are not committed; see
-[data/README.md](data/README.md).
+**UCI Student Performance** (UCI ID 320) — <https://archive.ics.uci.edu/dataset/320/student+performance>,
+licensed CC BY 4.0, by P. Cortez and A. M. G. Silva. Two Portuguese secondary-school
+cohorts:
+
+| Cohort | File | Students | Attributes |
+| ------ | ---- | -------- | ---------- |
+| Mathematics | `student-mat.csv` | 395 | 33 |
+| Portuguese language | `student-por.csv` | 649 | 33 |
+
+Attributes cover demographics, family background, study time, absences, past
+failures, social behaviour and three grades on the 0–20 scale: `G1` (first period),
+`G2` (second period) and `G3` (final grade, the performance target). Every attribute
+is described in [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
+
+**Validation.** Both official files pass all checks: the documented columns, the
+published row counts, no missing values, no duplicate rows, and no values outside the
+documented codes or ranges. Some valid values are noted but not removed: 38 Maths and
+15 Portuguese students have `G3 = 0`. Some students appear in both cohorts, but there
+is no student ID, so matching is approximate (358 one-to-one matches; UCI's join gives
+382 pairs). Details and limitations are in [data/README.md](data/README.md).
+
+Data files are not committed. Download and verify them with one command (below).
 
 The dataset contains **no dropout label**. This project therefore predicts final
 performance and *academic risk* (risk of failing the final assessment) and does not
@@ -114,14 +131,14 @@ Selected on experimental evidence, not implemented wholesale.
 .
 ├── backend/
 │   ├── app/            # FastAPI: config, routes, schemas, services
-│   ├── analytics/      # Offline pipeline: statistics, EDA, preprocessing, modelling
+│   ├── analytics/      # Offline pipeline: data layer (Phase 2); statistics, EDA, modelling (later)
 │   └── tests/
 ├── frontend/           # Next.js application
 ├── data/               # raw/ and processed/ (git-ignored contents)
 ├── models/             # Trained artifacts (git-ignored)
 ├── notebooks/          # Exploration only
 ├── scripts/            # Developer helpers (check.sh)
-├── docs/               # ARCHITECTURE.md, METHODOLOGY.md
+├── docs/               # ARCHITECTURE.md, METHODOLOGY.md, DATA_DICTIONARY.md
 └── PROJECT_ROADMAP.md
 ```
 
@@ -146,10 +163,22 @@ cd backend
 uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
 source .venv/bin/activate
 uv pip install -e ".[dev]"           # or: pip install -e ".[dev]"
+python -m analytics.data.download    # fetch + checksum-verify the UCI dataset (once)
 uvicorn app.main:app --reload --port 8000
 ```
 
 API: <http://localhost:8000/api/v1/health> · Docs: <http://localhost:8000/docs>
+
+| Endpoint (`/api/v1`) | Purpose |
+| -------------------- | ------- |
+| `GET /dataset/summary?cohort=math` | Dimensions, column types, quality counts, target |
+| `GET /dataset/schema?cohort=math` | Data dictionary plus values observed in the cohort |
+| `GET /dataset/quality?cohort=math` | Validation checks and observations |
+| `GET /dataset/records?cohort=math&page=1&page_size=25&search=teacher` | Paginated records |
+| `GET /dataset/overlap` | Approximate cross-cohort matching |
+
+`cohort` is `math` or `portuguese`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for error codes and limits.
 
 ### Frontend
 
@@ -159,8 +188,8 @@ npm install
 npm run dev
 ```
 
-App: <http://localhost:3000>. The dashboard shows live backend status when the API
-is running.
+App: <http://localhost:3000>. The dashboard shows live backend status, and the Data
+Explorer (`/data-explorer`) shows the dataset once the API is running.
 
 ### Quality checks
 
@@ -175,13 +204,20 @@ Runs Ruff, pytest, ESLint, TypeScript, Vitest and a production build.
 | Phase | Scope | Status |
 | ----- | ----- | ------ |
 | 1 | Project foundation | ✅ Complete |
-| 2 | Data layer & Data Explorer | Planned |
+| 2 | Data layer & Data Explorer | ✅ Complete |
 | 3 | Statistical analysis | Planned |
 | 4 | Exploratory data analysis | Planned |
 | 5 | Preprocessing & target formulation | Planned |
 | 6 | Modelling & model comparison | Planned |
 | 7 | Interpretability & risk insights | Planned |
 | 8 | Polish, documentation & release | Planned |
+
+## Licence
+
+The **software** in this repository is released under the [MIT License](LICENSE).
+The **dataset** is not part of the repository. It is published by UCI under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), which requires attribution
+to Cortez & Silva (2008). The MIT licence does not apply to the data.
 
 ## Limitations and ethics
 

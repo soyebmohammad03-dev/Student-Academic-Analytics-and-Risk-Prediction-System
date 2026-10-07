@@ -21,8 +21,8 @@ def test_dataset_reported_available_when_files_present(client, settings):
     assert body["dataset"]["available_locally"] is True
 
 
-def test_no_module_claims_to_be_available_in_phase_1(client):
+def test_only_delivered_modules_claim_to_be_available(client):
     modules = client.get("/api/v1/project").json()["modules"]
 
-    assert modules
-    assert all(module["status"] == "planned" for module in modules)
+    available = {m["key"] for m in modules if m["status"] == "available"}
+    assert available == {"data"}
