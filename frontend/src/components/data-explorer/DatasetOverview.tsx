@@ -1,20 +1,9 @@
 import { ArrowUpRight } from "lucide-react";
 
+import { MetricCard as Figure } from "@/components/ui/MetricCard";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { DatasetSummary } from "@/lib/api";
-
-function Figure({ label, value, hint }: { label: string; value: number; hint: string }) {
-  return (
-    <div className="bg-surface px-5 py-4">
-      <dt className="text-[12px] font-medium text-text-secondary">{label}</dt>
-      <dd className="mt-1 font-display text-[28px] leading-none font-semibold tracking-[-0.02em] text-text tabular-nums">
-        {value.toLocaleString("en")}
-      </dd>
-      <p className="mt-1.5 text-[12px] text-text-tertiary">{hint}</p>
-    </div>
-  );
-}
 
 export function DatasetOverview({ summary }: { summary?: DatasetSummary }) {
   if (!summary) {

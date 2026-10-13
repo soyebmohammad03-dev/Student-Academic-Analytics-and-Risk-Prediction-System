@@ -105,7 +105,11 @@ function Leaderboard({
         </caption>
         <thead className="text-[11px] text-text-tertiary">
           <tr className="bg-surface-muted">
-            <th scope="col" rowSpan={2} className="px-4 py-2 align-bottom font-medium">
+            <th
+              scope="col"
+              rowSpan={2}
+              className="sticky left-0 z-10 bg-surface-muted px-4 py-2 align-bottom font-medium"
+            >
               Model
             </th>
             <th
@@ -158,7 +162,15 @@ function Leaderboard({
             const isSelected = r.model === selected;
             return (
               <tr key={r.model} className={cn(isSelected && "bg-accent-soft/60")}>
-                <th scope="row" className="min-w-[13rem] px-4 py-2.5 font-medium text-text">
+                <th
+                  scope="row"
+                  className={cn(
+                    "sticky left-0 z-10 w-[9.5rem] min-w-[9.5rem] px-4 py-2.5 font-medium text-text sm:w-auto sm:min-w-[13rem]",
+                    isSelected
+                      ? "bg-[color-mix(in_srgb,var(--accent)_8%,var(--surface))]"
+                      : "bg-surface",
+                  )}
+                >
                   <span className="flex flex-wrap items-center gap-1.5">
                     {r.label}
                     {isSelected && <StatusBadge tone="accent">Selected</StatusBadge>}
@@ -190,7 +202,7 @@ function Leaderboard({
                       ) : (
                         <>
                           {fmt(s.mean, 3)}
-                          <span className="text-text-tertiary"> ± {fmt(s.std, 3)}</span>
+                          <span className="text-text-secondary"> ± {fmt(s.std, 3)}</span>
                         </>
                       )}
                     </td>
@@ -507,7 +519,13 @@ export function ModelComparisonView() {
             description={`${scenarioInfo[scenario].inputs} — ${scenarioInfo[scenario].when.toLowerCase()}. Baselines are listed last.`}
           >
             {results ? (
-              <Leaderboard results={results} task={task} selected={detail?.selection.model} />
+              <>
+                <Leaderboard results={results} task={task} selected={detail?.selection.model} />
+                <p className="mt-2 px-1 text-[12px] text-text-tertiary">
+                  Scroll the table sideways for the held-out test metrics; the model column stays in
+                  place.
+                </p>
+              </>
             ) : (
               <LoadingBlock label="Loading model results" height="h-64" />
             )}

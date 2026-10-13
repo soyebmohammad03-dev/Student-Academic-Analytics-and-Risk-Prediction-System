@@ -38,7 +38,9 @@ export function InfoTip({
   const hide = () => setPosition(null);
 
   return (
-    <span className={cn("inline-flex align-middle", className)}>
+    // relative: keeps the visually hidden text inside any scrolling table, so it
+    // cannot widen the page.
+    <span className={cn("relative inline-flex align-middle", className)}>
       <button
         ref={button}
         type="button"

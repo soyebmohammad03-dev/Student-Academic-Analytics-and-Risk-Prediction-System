@@ -21,10 +21,17 @@ def test_dataset_reported_available_when_files_present(client, settings):
     assert body["dataset"]["available_locally"] is True
 
 
-def test_only_delivered_modules_claim_to_be_available(client):
+def test_modules_match_the_delivered_frontend_pages(client):
     modules = client.get("/api/v1/project").json()["modules"]
 
-    available = {m["key"] for m in modules if m["status"] == "available"}
-    assert available == {"data", "statistics", "eda", "risk"}
-    # Model results and predictions are served by the API; their pages follow in Phase 8.
-    assert {m["key"] for m in modules if m["status"] == "in_progress"} == {"models", "prediction"}
+    # Every module has a working page since Phase 8; none is planned or in progress.
+    assert {m["key"] for m in modules} == {
+        "data",
+        "statistics",
+        "eda",
+        "models",
+        "prediction",
+        "interpretability",
+        "risk",
+    }
+    assert {m["status"] for m in modules} == {"available"}

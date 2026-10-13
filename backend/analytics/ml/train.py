@@ -21,7 +21,7 @@ from analytics.data import Cohort, load_cohort
 from analytics.data.download import DEFAULT_RAW_DIR, verify
 from analytics.ml.config import DEFAULT_MODELS_DIR, SearchMode, TrainingConfig
 from analytics.ml.persistence import load_results, save
-from analytics.ml.report import OUTPUT, render
+from analytics.ml.report import OUTPUT, render, update_readme
 from analytics.ml.training import train_cohort
 from analytics.preprocessing import prepare_cohort
 
@@ -44,6 +44,8 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         OUTPUT.write_text(render(results), encoding="utf-8")
         print(f"Wrote {OUTPUT}")
+        if update_readme(results):
+            print("Updated the results block in README.md")
         return 0
 
     if problems := verify(args.raw_dir):
@@ -65,6 +67,8 @@ def main(argv: list[str] | None = None) -> int:
     if config.search is SearchMode.FULL:
         OUTPUT.write_text(render(results), encoding="utf-8")
         print(f"Wrote {OUTPUT}")
+        if update_readme(results):
+            print("Updated the results block in README.md")
     return 0
 
 

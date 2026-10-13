@@ -32,7 +32,9 @@ export function MetricCard({
           </span>
         )}
       </dd>
-      {hint && <p className="mt-2 text-[11px] leading-4 text-text-tertiary tabular-nums">{hint}</p>}
+      {hint && (
+        <dd className="mt-2 text-[11px] leading-4 text-text-tertiary tabular-nums">{hint}</dd>
+      )}
     </div>
   );
 }

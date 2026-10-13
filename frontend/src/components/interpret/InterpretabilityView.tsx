@@ -52,7 +52,12 @@ function Calibration({
         {calibration.observed_rate.toFixed(2)} · Brier score {calibration.brier.toFixed(3)} · n ={" "}
         {calibration.n}
       </p>
-      <div className="mt-4 overflow-x-auto">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Calibration table (scrollable)"
+        className="mt-4 overflow-x-auto"
+      >
         <table className="w-full min-w-[360px] text-[12px] tabular-nums">
           <caption className="sr-only">Predicted probability versus observed share by bin</caption>
           <thead className="text-[11px] text-text-tertiary">
@@ -276,7 +281,7 @@ export function InterpretabilityView() {
             )}
 
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2 px-1">
                   <label
                     htmlFor="sensitivity-attribute"

@@ -82,6 +82,10 @@ export function RecordsTable({
         </div>
       ) : (
         <div
+          // Scrollable in both directions, so keyboard users must be able to focus it.
+          tabIndex={0}
+          role="region"
+          aria-label="Student records (scrollable)"
           className={cn(
             "max-h-[560px] overflow-auto transition-opacity duration-200",
             loading && "opacity-60",

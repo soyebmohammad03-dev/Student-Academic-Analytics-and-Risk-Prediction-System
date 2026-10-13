@@ -69,9 +69,9 @@ function CohortCard({ overview }: { overview: CohortOverview }) {
           <dd className="mt-1 font-display text-[26px] leading-none font-semibold tracking-[-0.02em] text-text tabular-nums">
             {fmtPercent(risk.percent)}
           </dd>
-          <p className="mt-1.5 text-[11px] text-text-tertiary tabular-nums">
+          <dd className="mt-1.5 text-[11px] text-text-tertiary tabular-nums">
             {risk.at_risk} of {risk.n} · 95% CI {fmtInterval(risk.ci, 1)}
-          </p>
+          </dd>
         </div>
         <div>
           <dt className="text-[12px] font-medium text-text-secondary">Final grade (G3)</dt>
@@ -79,9 +79,9 @@ function CohortCard({ overview }: { overview: CohortOverview }) {
             {fmt(g3.mean, 1)}
             <span className="ml-1 text-[14px] font-medium text-text-tertiary">mean</span>
           </dd>
-          <p className="mt-1.5 text-[11px] text-text-tertiary tabular-nums">
+          <dd className="mt-1.5 text-[11px] text-text-tertiary tabular-nums">
             median {fmt(g3.median, 0)} · SD {fmt(g3.std, 1)} · range {g3.minimum}–{g3.maximum}
-          </p>
+          </dd>
         </div>
       </dl>
 
@@ -138,43 +138,76 @@ function ModelMatrix({ selected }: { selected: SelectedModelSummary[] }) {
     selected.find((s) => s.cohort === cohort && s.task === task && s.scenario === scenario);
 
   return (
-    <div className="overflow-x-auto rounded-2xl bg-surface shadow-card">
-      <table className="w-full min-w-[640px] text-left text-[13px]">
-        <caption className="sr-only">
-          Selected model per cohort, task and scenario with held-out test and cross-validated scores
-        </caption>
-        <thead>
-          <tr className="border-b border-separator bg-surface-muted text-[11px] text-text-tertiary">
-            <th scope="col" className="px-4 py-2.5 font-medium">
-              Cohort · task
-            </th>
-            {scenarios.map((s) => (
-              <th key={s} scope="col" className="px-4 py-2.5 font-medium">
-                {scenarioInfo[s].label}
-                <span className="block font-normal">{scenarioInfo[s].inputs}</span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-separator">
-          {rows.map(({ cohort, task }) => (
-            <tr key={`${cohort}-${task}`}>
-              <th scope="row" className="px-4 py-3 align-top font-medium text-text">
-                {cohort === "math" ? "Mathematics" : "Portuguese"}
-                <span className="block text-[12px] font-normal text-text-secondary">
-                  {task === "regression" ? "Final grade · RMSE ↓" : "Academic risk · F1 ↑"}
-                </span>
+    <>
+      {/* Phones: one card per cohort and task, scenarios stacked. */}
+      <ul className="space-y-3 sm:hidden" aria-label="Selected models">
+        {rows.map(({ cohort, task }) => (
+          <li key={`${cohort}-${task}`} className="rounded-2xl bg-surface p-4 shadow-card">
+            <p className="text-[14px] font-semibold text-text">
+              {cohort === "math" ? "Mathematics" : "Portuguese"}
+              <span className="ml-1.5 text-[12px] font-normal text-text-secondary">
+                {task === "regression" ? "Final grade · RMSE ↓" : "Academic risk · F1 ↑"}
+              </span>
+            </p>
+            <dl className="mt-2 divide-y divide-separator">
+              {scenarios.map((sc) => (
+                <div key={sc} className="flex items-start justify-between gap-3 py-2">
+                  <dt className="pt-0.5 text-[12px] font-medium text-text-secondary">
+                    {scenarioInfo[sc].label}
+                  </dt>
+                  <dd className="min-w-0 text-right">
+                    <ModelCell item={find(cohort, task, sc)} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Selected models table (scrollable)"
+        className="hidden overflow-x-auto rounded-2xl bg-surface shadow-card sm:block"
+      >
+        <table className="w-full min-w-[640px] text-left text-[13px]">
+          <caption className="sr-only">
+            Selected model per cohort, task and scenario with held-out test and cross-validated
+            scores
+          </caption>
+          <thead>
+            <tr className="border-b border-separator bg-surface-muted text-[11px] text-text-tertiary">
+              <th scope="col" className="px-4 py-2.5 font-medium">
+                Cohort · task
               </th>
               {scenarios.map((s) => (
-                <td key={s} className="px-4 py-3 align-top">
-                  <ModelCell item={find(cohort, task, s)} />
-                </td>
+                <th key={s} scope="col" className="px-4 py-2.5 font-medium">
+                  {scenarioInfo[s].label}
+                  <span className="block font-normal">{scenarioInfo[s].inputs}</span>
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-separator">
+            {rows.map(({ cohort, task }) => (
+              <tr key={`${cohort}-${task}`}>
+                <th scope="row" className="px-4 py-3 align-top font-medium text-text">
+                  {cohort === "math" ? "Mathematics" : "Portuguese"}
+                  <span className="block text-[12px] font-normal text-text-secondary">
+                    {task === "regression" ? "Final grade · RMSE ↓" : "Academic risk · F1 ↑"}
+                  </span>
+                </th>
+                {scenarios.map((s) => (
+                  <td key={s} className="px-4 py-3 align-top">
+                    <ModelCell item={find(cohort, task, s)} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

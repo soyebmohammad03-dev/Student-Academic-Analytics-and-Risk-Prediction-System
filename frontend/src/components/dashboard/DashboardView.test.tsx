@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { interval, json, mockFetch } from "@/test/api";
@@ -186,5 +187,16 @@ describe("DashboardView", () => {
     );
     render(<DashboardView />);
     expect(await screen.findByText("The analytics API is not reachable")).toBeInTheDocument();
+  });
+});
+
+describe("DashboardView accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    routes();
+    const { container } = render(<DashboardView />);
+    await screen.findByText("Fixture highlight.");
+    await expectNoAxeViolations(container);
   });
 });

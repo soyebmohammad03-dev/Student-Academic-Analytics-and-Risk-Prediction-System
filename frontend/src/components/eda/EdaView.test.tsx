@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { statisticsResponse } from "@/test/statisticsFixtures";
@@ -50,5 +51,24 @@ describe("EdaView", () => {
 
     expect(screen.getByLabelText("Loading charts")).toBeInTheDocument();
     expect(await screen.findByText("The analytics API is not reachable")).toBeInTheDocument();
+  });
+});
+
+describe("EdaView accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string) => {
+        const url = new URL(input);
+        return Promise.resolve(
+          json(statisticsResponse(url.pathname, url.searchParams.get("cohort")!)),
+        );
+      }),
+    );
+    const { container } = render(<EdaView />);
+    await screen.findByRole("img", { name: "Histogram of Final grade" });
+    await expectNoAxeViolations(container);
   });
 });

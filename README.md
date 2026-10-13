@@ -1,410 +1,417 @@
-# Student Academic Analytics and Risk Prediction System
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Student Academic Analytics and Risk Prediction System" width="100%">
+</p>
 
-An integrated student-analytics system that moves from **statistical understanding**
-of student data, through **exploratory analytics** and **reproducible preprocessing**,
-to a **comparison of machine-learning models** that predict academic performance and
-identify **academic risk** — presented through a modern, interpretable web application.
+<p align="center">
+  <a href="https://github.com/soyebmohammad03-dev/Student-Academic-Analytics-and-Risk-Prediction-System/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/soyebmohammad03-dev/Student-Academic-Analytics-and-Risk-Prediction-System/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0f2a4a"></a>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-14808c?logo=python&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-14808c?logo=typescript&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-backend-14808c?logo=fastapi&logoColor=white">
+  <img alt="scikit-learn" src="https://img.shields.io/badge/scikit--learn-models-14808c?logo=scikitlearn&logoColor=white">
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-0f2a4a?logo=nextdotjs&logoColor=white">
+  <a href="https://archive.ics.uci.edu/dataset/320/student+performance"><img alt="Data: UCI Student Performance, CC BY 4.0" src="https://img.shields.io/badge/data-UCI%20%C2%B7%20CC%20BY%204.0-5a6b82"></a>
+</p>
 
-> **Status: Phase 8 of 9 complete — interactive analytics frontend.**
-> Every page now reads real results from the integrated FastAPI backend: a dashboard
-> that separates observed historical data from model evaluation, the Data Explorer,
-> statistical analysis, EDA, model comparison, a validated prediction form with
-> explanations, interpretability, risk analysis and a methodology page. Cohort and
-> scenario selections are shared across pages. Phase 9 (final validation and
-> presentation) remains. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) and the
-> [API reference](docs/API.md).
+<p align="center">
+  <b>A reproducible workflow from statistical understanding to interpretable academic-risk models — delivered as a working web application.</b>
+</p>
 
-ISPA undergraduate AI / Data Analytics project.
+An undergraduate AI & Data Analytics project (ISPA) built on the UCI Student Performance
+dataset. It validates the data, answers nine pre-specified research questions with
+assumption-checked statistics, explores the data visually, compares regression and
+classification models under three information scenarios with nested cross-validation,
+explains the selected models, and profiles **academic risk** — a final grade below 10.
+The dataset has no dropout outcome, so the system never claims to predict dropout.
 
----
+The contribution is the **integrated, reproducible workflow and its implementation**, not
+the novelty of any single technique.
+
+## Contents
+
+[Problem](#problem-statement) · [Objectives](#research-objectives) ·
+[Capabilities](#key-capabilities) · [Architecture](#system-architecture) ·
+[Workflow](#analytical-workflow) · [Dataset](#dataset) · [Methodology](#methodology) ·
+[Results](#results) · [Screenshots](#screenshots) · [Tech stack](#technology-stack) ·
+[Repository](#repository-structure) · [Getting started](#getting-started) ·
+[API](#api) · [Testing](#testing) · [Docs](#documentation) · [Limitations](#limitations-and-responsible-use) ·
+[Future scope](#future-scope) · [Credits & licence](#credits-and-licence)
 
 ## Problem statement
 
 Schools hold rich data on students' backgrounds, habits and grades, but it is rarely
-analysed systematically. Struggling students are often identified only after final
-results are published, when it is too late to intervene. A system that explains
-*which* factors are associated with poor performance — and estimates *who* is at
-risk while there is still time to act — can support earlier, better-targeted support.
+analysed systematically, and students who struggle are often identified only after final
+results are published. A system that shows *which* factors are associated with low
+performance, and estimates *who* may fall below the pass mark while there is still time to
+offer support, can inform earlier conversations — provided its evidence, uncertainty and
+limits are stated honestly.
 
-## Aim
+## Research objectives
 
-To design and implement a reproducible analytical workflow that:
+1. Describe both student cohorts statistically and test which factors are associated with
+   final performance, with effect sizes and multiple-comparison correction.
+2. Explore academic, family, social and behavioural patterns visually.
+3. Prepare the data with documented, leakage-free preprocessing.
+4. Train and compare regression (final grade) and classification (academic risk) models
+   against baselines, under early, mid-year and full-history information scenarios.
+5. Explain the selected models globally and for individual records, and profile observed
+   academic risk across school-related groups.
+6. Deliver all results through an API and an accessible web interface.
 
-1. Describes the student population statistically and tests which factors are
-   significantly associated with performance.
-2. Explores patterns across academic, family, social and behavioural attributes.
-3. Prepares the data through documented, leakage-free preprocessing and feature
-   engineering.
-4. Trains and compares multiple regression and classification models against baselines.
-5. Translates model output into interpretable academic-risk insights in a web application.
+## Key capabilities
 
-The contribution is the **integrated workflow and its implementation**, not novelty of
-any individual technique.
+| Area | What it does | Where |
+| --- | --- | --- |
+| Data quality | Checksum-pinned download; 33-column schema, codes and ranges validated; nothing deleted | Data Explorer · `analytics/data` |
+| Statistics | 9 research questions; Welch / Mann–Whitney / ANOVA / Kruskal–Wallis / χ² / Fisher chosen by assumption checks; effect sizes with CIs; Holm and Benjamini–Hochberg | Statistical Analysis · `analytics/statistics` |
+| EDA | Histograms, category bars, box plots, aggregated scatter plots, Spearman heatmap, risk profile, outlier screening | Exploratory Analysis |
+| Machine learning | Baselines + 3 regression and 5 classification models; nested 5×5 CV; CV-only one-SE selection; held-out test scored once | Model Comparison · `analytics/ml` |
+| Prediction | Validated form generated from the data dictionary; only the scenario's inputs; grade and risk shown separately | Prediction |
+| Interpretability | Attribute-level Shapley explanations; permutation, Shapley, impurity and coefficient importance; calibration; sensitivity experiments | Interpretability · `analytics/interpret` |
+| Academic risk | Observed group rates with Wilson CIs, two-way tables, evidence-checked suggestions for human review | Risk Analysis · `analytics/risk` |
+| Integration | One cached pipeline, readiness checks, typed errors, structured logs | `analytics/pipeline.py` · [docs/API.md](docs/API.md) |
+
+## System architecture
+
+```mermaid
+flowchart LR
+    subgraph Offline["Offline scripts (run once)"]
+        D["analytics.data.download<br/>UCI files + SHA-256"] --> R[("data/raw")]
+        R --> T["analytics.ml.train<br/>nested CV, selection"]
+        T --> M[("models/<br/>12 pipelines + results")]
+        M --> I["analytics.interpret.build<br/>importance, calibration"]
+        I --> M
+    end
+    subgraph Backend["FastAPI backend (read-only)"]
+        P["AnalyticsPipeline<br/>data · statistics · EDA<br/>models · explanations · risk"]
+        A["/api/v1 routes<br/>typed JSON · {code, detail} errors"]
+        P --> A
+    end
+    subgraph Frontend["Next.js frontend"]
+        U["9 pages · shared cohort and scenario<br/>charts · forms · loading and error states"]
+    end
+    R --> P
+    M --> P
+    A -- "JSON over HTTP (CORS)" --> U
+```
+
+The API never downloads data or trains models; `GET /api/v1/ready` reports what is
+missing and the command that fixes it. The frontend renders only API responses and shows
+an explanatory state when a component is unavailable. Details:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Analytical workflow
+
+<p align="center"><img src="docs/assets/workflow.svg" alt="Seven-stage analytical workflow from data validation to the application, with guard rails" width="100%"></p>
 
 ## Dataset
 
-**UCI Student Performance** (UCI ID 320) — <https://archive.ics.uci.edu/dataset/320/student+performance>,
-licensed CC BY 4.0, by P. Cortez and A. M. G. Silva. Two Portuguese secondary-school
-cohorts:
+**UCI Student Performance** (ID 320), P. Cortez and A. M. G. Silva, licensed
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) —
+<https://archive.ics.uci.edu/dataset/320/student+performance>.
 
-| Cohort | File | Students | Attributes |
-| ------ | ---- | -------- | ---------- |
-| Mathematics | `student-mat.csv` | 395 | 33 |
-| Portuguese language | `student-por.csv` | 649 | 33 |
+| Cohort | File | Students | Columns | Below the pass mark (G3 < 10) | G3 = 0 |
+| --- | --- | --- | --- | --- | --- |
+| Mathematics | `student-mat.csv` | 395 | 33 | 130 (32.9%) | 38 |
+| Portuguese language | `student-por.csv` | 649 | 33 | 100 (15.4%) | 15 |
 
-Attributes cover demographics, family background, study time, absences, past
-failures, social behaviour and three grades on the 0–20 scale: `G1` (first period),
-`G2` (second period) and `G3` (final grade, the performance target). Every attribute
-is described in [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
+30 demographic, family, social and school attributes plus the period grades `G1`, `G2`
+and the final grade `G3` (0–20). Both files pass every validation check; values such as
+`G3 = 0` are kept and analysed, never removed. The files are not committed — one command
+downloads and verifies them. Every attribute is documented in
+[docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 
-**Validation.** Both official files pass all checks: the documented columns, the
-published row counts, no missing values, no duplicate rows, and no values outside the
-documented codes or ranges. Some valid values are noted but not removed: 38 Maths and
-15 Portuguese students have `G3 = 0`. Some students appear in both cohorts, but there
-is no student ID, so matching is approximate (358 one-to-one matches; UCI's join gives
-382 pairs). Details and limitations are in [data/README.md](data/README.md).
+**Reference paper.** Cortez, P., & Silva, A. M. G. (2008). *Using Data Mining to Predict
+Secondary School Student Performance.* In A. Brito & J. Teixeira (Eds.), Proceedings of
+the 5th Future Business Technology Conference (FUBUTEC 2008), pp. 5–12. Porto: EUROSIS.
 
-Data files are not committed. Download and verify them with one command (below).
+## Methodology
 
-The dataset contains **no dropout label**. This project therefore predicts final
-performance and *academic risk* (risk of failing the final assessment) and does not
-claim to predict dropout.
+The full, decision-by-decision account is in [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
-## Research reference
+**Statistics.** Descriptive statistics with confidence intervals; Pearson or Spearman
+correlation chosen by distribution; group comparisons chosen by normality and
+equal-variance checks (Welch's t, Mann–Whitney U, ANOVA, Welch's ANOVA, Kruskal–Wallis)
+with Tukey HSD, Games–Howell or Dunn post-hoc tests; χ² or Fisher's exact test for
+categorical associations. Effect sizes (Cohen's d, η², rank-biserial r, Cramér's V) are
+reported beside every p-value. The seven confirmatory tests are Holm-corrected;
+exploratory families use Benjamini–Hochberg. Significance and effect size are reported
+separately, and every finding is an association in observational data, never a cause.
+Results: [docs/STATISTICAL_FINDINGS.md](docs/STATISTICAL_FINDINGS.md).
 
-Cortez, P., & Silva, A. M. G. (2008). *Using Data Mining to Predict Secondary School
-Student Performance.* In A. Brito & J. Teixeira (Eds.), Proceedings of the 5th Future
-Business Technology Conference (FUBUTEC 2008), pp. 5–12. Porto, Portugal: EUROSIS.
+**Exploratory analysis.** Grade and attribute distributions, final grade by group (box
+plots), aggregated scatter plots that size identical observations by count, a Spearman
+heatmap, an at-risk vs not-at-risk profile and Tukey / z outlier screening (flagged, not
+removed).
 
-## Proposed methodology
+**Targets and leakage control.** Regression predicts `G3`; classification predicts
+`at_risk = G3 < 10`. `G3` and `at_risk` are never inputs, a `ScenarioGuard` rejects any
+column set that does not match its scenario, and imputers, encoders and scalers are
+fitted inside training folds only.
 
-```
-Student data → Validation → Preprocessing & feature engineering → Statistical
-analysis & EDA → Model training → Evaluation & comparison → Interpretable
-academic-risk insights → Web application
-```
+**Prediction scenarios** — different amounts of information, not different model quality:
 
-| Stage | Planned content |
-| ----- | --------------- |
-| Statistical analysis (implemented) | Descriptive statistics; Spearman/Pearson correlations with CIs; assumption-checked tests (Welch's t, Mann–Whitney, ANOVA, Welch's ANOVA, Kruskal–Wallis, chi-square/Fisher) with post-hoc tests; effect sizes with 95% CIs; Holm and Benjamini–Hochberg corrections |
-| Exploratory analysis (implemented) | Histograms, bar charts, box plots, scatter plots, correlation heatmap, academic-risk profile, cross-tab, outlier screening |
-| Preprocessing (implemented) | Targets, leakage-aware feature scenarios, one-hot/ordinal encoding with fixed categories, two justified engineered features, training-only imputation/scaling, stratified reproducible split |
-| Modelling (implemented) | Baselines plus 3 regression and 5 classification models per cohort and scenario; nested cross-validation with bounded grid search; CV-only selection rule; held-out test set scored once |
-| Interpretation (implemented) | Attribute-level Shapley explanations; permutation, Shapley, impurity and coefficient importance; probability calibration; model-sensitivity experiments; group risk profiles; evidence-checked suggestions |
+| Scenario | Inputs | When the prediction could be made |
+| --- | --- | --- |
+| Early | 30 non-grade attributes | Before any grade of the year |
+| Mid-year | + `G1` | After the first grading period |
+| Full history | + `G1` + `G2` | After the second grading period |
 
-### Target definition and leakage control
+**Models and evaluation.** Mean / majority-class baselines; linear regression, decision
+tree and random forest (regression); logistic regression, decision tree, k-NN, SVM (RBF)
+and random forest (classification, balanced class weights where supported). A stratified
+80/20 split (seed 42) holds out a test set. Nested cross-validation (5 outer × 5 inner
+folds, bounded grid search) estimates performance on the training set; the selected model
+has the best mean CV RMSE / F1, or is the simplest within one standard error of it. The
+**test set never influences selection** and is scored once. Metrics: MAE, RMSE, R²;
+precision, recall, F1, ROC-AUC, specificity and confusion matrices, always beside a
+baseline.
 
-Defined before any training — full detail in [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+**Interpretability.** Explanations are per original attribute. Individual explanations
+use interventional Shapley values by permutation sampling (seeded, exactly additive, with
+standard errors). Global importance is reported per method — held-out permutation
+importance (plus a G3 > 0 variant), mean |Shapley|, impurity importance, coefficients —
+each on its own scale and never compared across methods. Probabilities are shown only
+where a model produces them and are labelled as class-weighted, not calibrated.
+Sensitivity experiments vary one school-related attribute at a time and describe model
+behaviour, not interventions. Results:
+[docs/INTERPRETABILITY.md](docs/INTERPRETABILITY.md).
 
-- **Regression target:** `G3`, the final grade (0–20).
-- **Classification target:** `at_risk = 1 if G3 < 10`, below the pass mark. This is
-  academic risk, not dropout. On the official data, 130 of 395 Mathematics students
-  (32.9%) and 100 of 649 Portuguese students (15.4%) are at risk.
-- `G3` and `at_risk` are **never** predictors. The code rejects them.
-- `G1`/`G2` are only used when the prediction scenario legitimately has them:
+**Academic risk.** A final grade below the pass mark of 10. Group profiles report observed
+proportions with 95% Wilson intervals for school-related attributes only (no demographic
+group is labelled at risk); groups under 10 students are marked. No low / medium / high
+bands are used, because no validated thresholds exist for them. Suggestions are general,
+non-punitive prompts for a teacher or adviser, shown only when the cohort's data support
+them.
 
-  | Scenario | Inputs | Use |
-  | -------- | ------ | --- |
-  | `full_history` | non-grade attributes + G1 + G2 | late-year prediction |
-  | `mid_year` | non-grade attributes + G1 | after the first period |
-  | `early` | non-grade attributes only | early warning |
+## Results
 
-  A `ScenarioGuard` at the start of every preprocessor rejects any feature set that
-  doesn't match its scenario. Neither end of the range is "better": `full_history`
-  shows how predictable grades are once interim grades exist, and `early` shows what
-  is knowable before any grade.
+The tables below are generated from the recorded training run (`models/ml_results.json`),
+and the test suite checks that they still match it.
 
-### Statistical analysis (Phase 4)
+<!-- results:start (generated by `python -m analytics.ml.train --report-only`) -->
 
-`backend/analytics/statistics/` answers nine research questions for each cohort.
-**All results are associations in observational data; none implies cause.** Effect
-sizes are always reported with significance.
+**Final grade (regression).** Lower RMSE/MAE is better; the baseline predicts the training mean.
 
-Selected findings on the official data (all from
-[docs/STATISTICAL_FINDINGS.md](docs/STATISTICAL_FINDINGS.md), which is generated from
-code):
+| Cohort | Scenario | Selected model | CV RMSE (mean ± SD) | Test RMSE | Test MAE | Test R² | Baseline test RMSE |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Mathematics | Full history | Random forest | 1.72 ± 0.40 | 1.26 | 0.82 | 0.92 | 4.60 |
+| Mathematics | Mid-year | Random forest | 2.57 ± 0.29 | 2.15 | 1.60 | 0.78 | 4.60 |
+| Mathematics | Early | Random forest | 3.88 ± 0.32 | 3.94 | 2.88 | 0.27 | 4.60 |
+| Portuguese | Full history | Linear regression | 1.25 ± 0.26 | 1.45 | 0.85 | 0.83 | 3.56 |
+| Portuguese | Mid-year | Linear regression | 1.77 ± 0.37 | 2.03 | 1.34 | 0.67 | 3.56 |
+| Portuguese | Early | Linear regression | 2.61 ± 0.22 | 3.10 | 2.22 | 0.24 | 3.56 |
 
-- **Past class failures.** These show the clearest non-grade association with lower
-  final grades in both cohorts (large effect in Mathematics, d = 0.93; Holm p < .001).
-  They are also the strongest categorical correlate of academic risk.
-- **Mother's education.** Associated with G3 in both cohorts (small to medium effect).
-- **Study time.** Weakly associated with G3 in Portuguese (ρ = 0.27). The association
-  is not significant in Mathematics after Holm correction.
-- **Interim grades.** G1 and G2 correlate very strongly with G3 (ρ ≈ 0.88–0.96). This
-  is why the `early` scenario matters for Phase 5.
-- **Zero final grades.** All 38 (Mathematics) and 15 (Portuguese) students with G3 = 0
-  have zero recorded absences. Excluding them changes the absences–G3 correlation in
-  Mathematics from ρ = 0.02 to −0.24. This is reported as a sensitivity analysis; no
-  rows are removed.
+**Academic risk (classification, positive class = G3 < 10).** The majority-class baseline has recall 0 and F1 0.
 
-Methods are in [docs/METHODOLOGY.md §5](docs/METHODOLOGY.md#5-statistical-analysis-phase-4):
-test-selection rules, assumption checks, effect sizes, CIs, multiple-comparison control
-and limitations.
+| Cohort | Scenario | Selected model | CV F1 (mean ± SD) | Test F1 | Test recall | Test precision | Test ROC-AUC |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Mathematics | Full history | Decision tree | 0.89 ± 0.03 | 0.84 | 0.92 | 0.77 | 0.95 |
+| Mathematics | Mid-year | Logistic regression | 0.75 ± 0.07 | 0.75 | 0.81 | 0.70 | 0.93 |
+| Mathematics | Early | Support vector machine (RBF) | 0.50 ± 0.03 | 0.49 | 0.50 | 0.48 | 0.69 |
+| Portuguese | Full history | Random forest | 0.77 ± 0.05 | 0.65 | 0.85 | 0.53 | 0.94 |
+| Portuguese | Mid-year | Logistic regression | 0.67 ± 0.10 | 0.64 | 0.85 | 0.52 | 0.90 |
+| Portuguese | Early | Logistic regression | 0.51 ± 0.05 | 0.44 | 0.55 | 0.37 | 0.76 |
 
-### Preprocessing (Phase 3)
+Training run of 2026-10-13; held-out test sets of 79 (Mathematics) and 130 (Portuguese) students. Full tables, folds and error analysis: [docs/ML_RESULTS.md](docs/ML_RESULTS.md).
 
-`backend/analytics/preprocessing/` turns a validated cohort into an analytical dataset
-without removing rows or touching the raw files.
+<!-- results:end -->
 
-- **Encoding.** Binary categories become a single 0/1 column. Nominal categories (jobs,
-  reason, guardian) are fully one-hot encoded. UCI's ordered codes (education, study
-  time, ratings) are kept as ordinal integers.
-- **Engineered features.** Two are added: `has_past_failures` and `log_absences`.
-  Each has a documented reason and leakage assessment.
-- **Training-only fitting.** Imputation and scaling are learned only on training data,
-  inside a scikit-learn `Pipeline`.
-- **Split.** 80/20, stratified on `at_risk`, `random_state=42`: Mathematics 316/79,
-  Portuguese 519/130.
+**How to read them.** Period grades correlate strongly with the final grade, so the
+full-history models mostly reuse interim grades; their scores reflect information, not
+insight. The **early** scenario is the realistic one for early support, and there the
+models are modest: the selected classifiers found about half of the held-out students who
+finished below the pass mark (recall 0.50 and 0.55). Every selected model beats its
+baseline in cross-validation, and test sets of 79 and 130 students make the test figures
+noisy.
 
-Details are in [docs/METHODOLOGY.md §4](docs/METHODOLOGY.md#4-preprocessing-phase-3)
-and [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
+## Screenshots
 
-### Machine learning (Phase 5)
+Captured from the running application with the real dataset and trained models
+(`node scripts/screenshots.mjs`).
 
-`backend/analytics/ml/` trains every model for each cohort (Mathematics, Portuguese)
-and scenario (`early`, `mid_year`, `full_history`):
+| Dashboard | Model comparison |
+| --- | --- |
+| <img src="docs/assets/screenshots/dashboard.png" alt="Dashboard: observed cohort facts with grade distributions, kept separate from model evaluation" width="100%"> | <img src="docs/assets/screenshots/model-comparison.png" alt="Model comparison table with cross-validation and held-out test metrics" width="100%"> |
+| **Prediction** | **Interpretability** |
+| <img src="docs/assets/screenshots/prediction.png" alt="Prediction results: predicted grade and academic-risk flag shown separately, with a Shapley explanation" width="100%"> | <img src="docs/assets/screenshots/interpretability.png" alt="Interpretability: importance per method and the explanation of one record" width="100%"> |
+| **Risk analysis (dark theme)** | **Exploratory analysis (dark theme)** |
+| <img src="docs/assets/screenshots/risk-analysis.png" alt="Risk analysis: observed at-risk share by group with 95% intervals" width="100%"> | <img src="docs/assets/screenshots/eda.png" alt="Exploratory data analysis: grade histograms" width="100%"> |
 
-- **Regression (G3):** mean baseline, linear regression, decision tree, random forest.
-- **Classification (`at_risk`):** majority-class baseline, logistic regression,
-  decision tree, k-nearest neighbours, SVM (RBF), random forest. Class imbalance is
-  handled with `class_weight="balanced"`, with no resampling.
-- **Protocol:** each model is a preprocessing + estimator `Pipeline`.
-  - Nested cross-validation runs on the training set only: 5 outer folds, with a
-    5-fold grid search inside each.
-  - A final grid search refits on the full training set.
-  - The held-out test set is scored once.
-- **Metrics:**
-  - regression: MAE, MSE, RMSE, R²;
-  - classification: accuracy, balanced accuracy, precision, recall, specificity, F1,
-    ROC-AUC (from scores), confusion matrix.
-- **Selection:** the CV mean of RMSE (regression) or at-risk F1 (classification),
-  using the one-standard-error rule and preferring the simpler model. Test scores
-  never influence selection.
-
-What the run shows (numbers in [docs/ML_RESULTS.md](docs/ML_RESULTS.md), generated
-from the training run):
-
-- **Baselines.** Every selected model beats its baseline. The majority-class
-  baseline's accuracy, which matches the share of passing students, illustrates why
-  accuracy is never reported alone.
-- **Scenarios.** Performance rises sharply from `early` to `mid_year` to
-  `full_history`. This reflects information availability: G1 and G2 are interim grades
-  of the same year. It does not mean a "smarter" model.
-- **Early scenario.** Without grades, models explain a modest share of G3 variance.
-  They detect only part of the at-risk students. They are academic-risk estimates, not
-  dropout predictions.
-- **Cohorts differ.** The selected models are not the same for Mathematics and
-  Portuguese. Both cohorts are reported separately.
-- **Errors.** Errors concentrate in students with G3 = 0, who are over-predicted, and
-  near the pass mark. A zero-grade sensitivity check is included.
-
-Methods: [docs/METHODOLOGY.md §6](docs/METHODOLOGY.md#6-machine-learning-and-evaluation-phase-5).
-Artefacts are regenerated with `python -m analytics.ml.train`
-(see [models/README.md](models/README.md)).
-
-### Interpretability and academic-risk analysis (Phase 6)
-
-`backend/analytics/interpret/` and `backend/analytics/risk/` explain the 12 selected
-models without retraining them. They keep four kinds of statement apart: model
-prediction, model explanation, group-level association, and (never) causal claims.
-
-- **Individual explanations.** Interventional Shapley values estimated by permutation
-  sampling over the original attributes. One-hot and engineered columns therefore
-  stay consistent, and one method covers forests, trees, linear models and the SVM.
-  Explanations are exactly additive, seeded and bounded. The `shap` package was not
-  added; [METHODOLOGY §7.2](docs/METHODOLOGY.md#72-shap-decision) explains why.
-- **Global importance:**
-  - permutation importance on the held-out test set, as an evaluation-time
-    diagnostic;
-  - mean absolute Shapley values;
-  - impurity importance for trees and forests;
-  - coefficients for linear models.
-
-  Each is reported on its own scale with its limitations.
-- **Probabilities.** These are reported only by models that output them. The selected
-  classifiers were trained with class weights, and their probabilities over-predict
-  the observed at-risk rate on the test set. They order students but are not
-  calibrated chances. No low/moderate/high categories are invented.
-- **Sensitivity experiments.** One school-related attribute is varied, with all other
-  inputs held fixed. The same record can also be compared across scenarios. These
-  show model behaviour, not interventions.
-- **Risk profiles.** Observed at-risk shares, with 95% intervals, by past failures,
-  study time, absences, support, paid classes, plans for higher education and
-  internet. Demographic groups are deliberately not profiled.
-- **Suggestions.** Non-punitive prompts for a teacher or adviser. Each is shown only
-  when the cohort's data show higher observed risk for the triggering group, and every
-  response carries a disclaimer.
-
-Findings from the real data are in
-[docs/INTERPRETABILITY.md](docs/INTERPRETABILITY.md), which is generated. For example,
-past failures and interim grades dominate the selected models. In Mathematics, much of
-the models' reliance on absences comes from the students with G3 = 0, all of whom have
-0 recorded absences.
+<p align="center"><img src="docs/assets/screenshots/mobile-dashboard.png" alt="Dashboard on a phone-width screen" width="260"></p>
 
 ## Technology stack
 
-| Layer       | Technology |
-| ----------- | ---------- |
-| Analytics   | Python 3.12, pandas, NumPy, SciPy, scikit-learn |
-| API         | FastAPI, Pydantic, pydantic-settings, Uvicorn |
-| Frontend    | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
-| Quality     | pytest, Ruff, ESLint, Prettier, Vitest, Testing Library |
+| Layer | Tools |
+| --- | --- |
+| Analytics | Python 3.12, pandas, NumPy, SciPy, scikit-learn, joblib |
+| API | FastAPI, Pydantic v2, pydantic-settings, Uvicorn |
+| Interface | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, lucide-react |
+| Quality | pytest, Ruff, ESLint, Vitest, Testing Library, axe-core, GitHub Actions |
 
-## Architecture
+## Repository structure
 
 ```
-.
 ├── backend/
-│   ├── app/            # FastAPI: config, routes, schemas, services
-│   ├── analytics/      # data, preprocessing, statistics, ml, interpret + risk, pipeline (Phases 2–7)
-│   └── tests/
-├── frontend/           # Next.js application
-├── data/               # raw/ and processed/ (git-ignored contents)
-├── models/             # Trained artifacts (git-ignored; regenerated by analytics.ml.train)
-├── notebooks/          # Exploration only
-├── scripts/            # Developer helpers (check.sh)
-├── docs/               # ARCHITECTURE, METHODOLOGY, API, DATA_DICTIONARY, STATISTICAL_FINDINGS, ML_RESULTS, INTERPRETABILITY
-└── PROJECT_ROADMAP.md
+│   ├── analytics/            # framework-independent analysis package
+│   │   ├── data/             # download, checksums, dictionary, validation, overlap
+│   │   ├── preprocessing/    # targets, scenarios, ScenarioGuard, encoders, split
+│   │   ├── statistics/       # tests, effect sizes, corrections, EDA aggregates, findings
+│   │   ├── ml/               # registry, nested CV, selection, persistence, prediction, reports
+│   │   ├── interpret/        # Shapley, importance, calibration, sensitivity, report
+│   │   ├── risk/             # group profiles, evidence-checked suggestions
+│   │   └── pipeline.py       # AnalyticsPipeline: caching, readiness, summaries
+│   ├── app/                  # FastAPI: routes, schemas, services, errors, logging
+│   └── tests/                # pytest (synthetic data; real-data tests skip without data)
+├── frontend/src/
+│   ├── app/                  # one route per page
+│   ├── components/           # layout, ui, charts and one folder per page
+│   └── lib/                  # typed API client, hooks, shared state, form rules
+├── data/raw/                 # downloaded UCI files (git-ignored)
+├── models/                   # trained artefacts (git-ignored, regenerated)
+├── docs/                     # methodology, results, API, architecture, assets
+├── scripts/                  # check.sh, screenshots.mjs
+└── .github/workflows/ci.yml  # lint, tests and build on every push
 ```
 
-- Training is offline and separate from inference; the API only loads saved artifacts.
-- `app` depends on `analytics`, never the reverse. The frontend talks only to the API.
-- The UI renders only values returned by the API — no placeholder statistics.
+## Getting started
 
-Tests live beside the code they cover (`backend/tests`, `frontend/src/**/*.test.tsx`)
-so each half of the stack can be checked independently.
+**Prerequisites:** Python 3.11+ (3.12 recommended), Node.js 20.9+ and npm, git.
+[uv](https://docs.astral.sh/uv/) is optional.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+```bash
+git clone https://github.com/soyebmohammad03-dev/Student-Academic-Analytics-and-Risk-Prediction-System.git
+cd Student-Academic-Analytics-and-Risk-Prediction-System
+```
 
-## Running locally
-
-**Prerequisites:** Python 3.11+ (3.12 recommended), Node.js 20.9+, npm.
-[uv](https://docs.astral.sh/uv/) is optional but recommended.
-
-### Backend
-
-Setting up the data and models and starting the API are separate steps. The API never
-downloads data or trains models; it reports what is missing at `/api/v1/ready`.
-
-**One-time setup**, or whenever artefacts need regenerating:
+**1. Backend environment**
 
 ```bash
 cd backend
-uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"           # or: pip install -e ".[dev]"
-python -m analytics.data.download    # fetch + checksum-verify the UCI dataset
-python -m analytics.ml.train         # train, evaluate and persist models (~8 minutes)
-python -m analytics.interpret.build  # global importance + docs/INTERPRETABILITY.md (~1 minute)
+python3.12 -m venv .venv && source .venv/bin/activate   # or: uv venv --python 3.12 .venv
+pip install -e ".[dev]"                                  # or: uv pip install -e ".[dev]"
 ```
 
-**Start the API** (normal operation, starts in seconds):
+**2. Dataset** — downloads the official UCI archive and verifies SHA-256 checksums
+(a few seconds; the only step that needs the network):
 
 ```bash
-cd backend && source .venv/bin/activate
-uvicorn app.main:app --port 8000     # add --reload while developing
-curl -s localhost:8000/api/v1/ready  # "ready", or which component is missing and the fix
+python -m analytics.data.download
 ```
 
-Optional settings (environment variables, or `backend/.env`; see `.env.example`):
-`SAARPS_DATA_DIR`, `SAARPS_MODELS_DIR`, `SAARPS_CORS_ORIGINS`, `SAARPS_LOG_LEVEL`.
-`python -m analytics.pipeline --cohort math --scenario early` prints the same
-integrated summary offline.
-
-API: <http://localhost:8000/api/v1/health> · OpenAPI docs: <http://localhost:8000/docs> ·
-Reference with examples: [docs/API.md](docs/API.md).
-
-| Endpoint (`/api/v1`) | Purpose |
-| -------------------- | ------- |
-| `GET /ready` | Component readiness: API, dataset, statistics, models, interpretability |
-| `GET /dashboard/summary` | Observed cohort facts and selected-model evaluation, kept separate |
-| `GET /pipeline/summary?cohort=math&scenario=early` | Every analytical step for one cohort and scenario |
-| `GET /dataset/summary?cohort=math` | Dimensions, column types, quality counts, target |
-| `GET /dataset/schema?cohort=math` | Data dictionary plus values observed in the cohort |
-| `GET /dataset/quality?cohort=math` | Validation checks and observations |
-| `GET /dataset/records?cohort=math&page=1&page_size=25&search=teacher` | Paginated records |
-| `GET /dataset/overlap` | Approximate cross-cohort matching |
-| `GET /preprocessing/summary?cohort=math&scenario=early` | Preprocessing quality report for a cohort and scenario |
-| `GET /statistics/hypothesis-tests?cohort=math` | Research questions with tests, adjusted p-values and effect sizes |
-| `GET /statistics/group-comparisons?cohort=math&variable=studytime` | Assumption-checked group comparison |
-| `GET /statistics/{descriptive,distributions,correlations,associations,outliers}?cohort=math` | Other statistical results |
-| `GET /eda/charts?cohort=math` | Chart-ready EDA aggregates |
-| `GET /models` | Model definitions, search spaces, run configuration and selected models |
-| `GET /models/{regression,classification}?cohort=math` | Model comparison tables (CV and test metrics) |
-| `GET /models/scenario-comparison?cohort=math&task=classification` | Early → mid-year → full-history comparison |
-| `GET /models/cohort-comparison` | Mathematics vs Portuguese |
-| `GET /models/selected?cohort=math&task=regression&scenario=early` | Selected model metadata and error analysis |
-| `GET /models/evaluations?cohort=math&task=regression&scenario=early` | Per-fold results and diagnostics |
-| `POST /models/predict` | Prediction from a validated feature record |
-| `GET /interpretability/importance?cohort=math&task=classification&scenario=early` | Global importance of the selected model, per method |
-| `POST /interpretability/explain` | Prediction with attribute-level Shapley contributions |
-| `POST /interpretability/sensitivity` · `/interpretability/scenario-sensitivity` | Model-sensitivity experiments |
-| `GET /risk/profiles?cohort=math` | Observed academic risk by student group |
-| `POST /risk/suggestions` · `POST /risk/insights` | Evidence-checked suggestions; individual, group and suggestion layers kept separate |
-
-`cohort` is `math` or `portuguese`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-for error codes and limits.
-
-### Frontend
+**3. Models and interpretability** — offline and deterministic (seed 42); about 9 minutes
+and 1 minute on a recent laptop:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+python -m analytics.ml.train          # trains, evaluates and saves the 12 selected pipelines
+python -m analytics.interpret.build   # global importance and calibration
 ```
 
-App: <http://localhost:3000>. Start the API first (above); every page reads its
-results from it and explains what to run when something is missing.
+**4. Start the API and the interface** (two terminals):
 
-| Page | Route | Main endpoints |
-| ---- | ----- | -------------- |
-| Dashboard | `/` | `/dashboard/summary`, `/statistics/hypothesis-tests`, `/pipeline/summary`, `/statistics/distributions` |
-| Data Explorer | `/data-explorer` | `/dataset/{summary,quality,schema,records,overlap}` |
-| Statistical Analysis | `/statistics` | `/statistics/*` |
-| Exploratory Analysis | `/eda` | `/eda/charts` |
-| Model Comparison | `/model-comparison` | `/models/{evaluations,selected,scenario-comparison,cohort-comparison}` |
-| Prediction | `/prediction` | `/dataset/schema`, `POST /models/predict`, `POST /interpretability/explain`, `POST /risk/insights` |
-| Interpretability | `/interpretability` | `/interpretability/importance`, `POST /interpretability/{explain,sensitivity,scenario-sensitivity}` |
-| Risk Analysis | `/risk-analysis` | `/risk/profiles`, `/models/scenario-comparison` |
-| Methodology | `/about` | — (static, follows `docs/METHODOLOGY.md`) |
+```bash
+cd backend && source .venv/bin/activate && uvicorn app.main:app --port 8000
+```
 
-The selected cohort and scenario follow you between pages (URL parameters, then the
-tab's `sessionStorage`; only those two values are stored). The prediction form is
-generated from `/dataset/schema`, shows only the inputs the chosen scenario allows,
-and never offers G3.
+```bash
+cd frontend && npm install && npm run dev
+```
 
-### Quality checks
+Open <http://localhost:3000>. `curl -s localhost:8000/api/v1/ready` should report
+`"ready"`; otherwise it names the missing component and the command that restores it.
+Optional settings (`SAARPS_DATA_DIR`, `SAARPS_MODELS_DIR`, `SAARPS_CORS_ORIGINS`,
+`SAARPS_LOG_LEVEL`) are listed in `backend/.env.example`; the frontend's API URL is set by
+`NEXT_PUBLIC_API_BASE_URL` (`frontend/.env.example`).
+
+A verified fresh-clone run of these steps, and how to regenerate every generated document,
+is described in [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).
+
+## API
+
+Base URL `http://localhost:8000/api/v1`; interactive OpenAPI docs at
+<http://localhost:8000/docs>. Every error has the body `{"code", "detail"}`, without paths
+or stack traces.
+
+| Group | Endpoints |
+| --- | --- |
+| System | `GET /health`, `/ready`, `/project`, `/dashboard/summary`, `/pipeline/summary` |
+| Dataset | `GET /dataset/{summary,schema,quality,records,overlap}`, `/preprocessing/summary` |
+| Statistics & EDA | `GET /statistics/{descriptive,distributions,correlations,hypothesis-tests,group-comparisons,associations,outliers}`, `/eda/charts` |
+| Models | `GET /models`, `/models/{regression,classification,evaluations,scenario-comparison,cohort-comparison,selected}`, `POST /models/predict` |
+| Interpretability | `GET /interpretability/importance`, `POST /interpretability/{explain,sensitivity,scenario-sensitivity}` |
+| Risk | `GET /risk/profiles`, `POST /risk/{suggestions,insights}` |
+
+Request and response examples, error codes and measured timings:
+[docs/API.md](docs/API.md).
+
+## Testing
 
 ```bash
 ./scripts/check.sh
 ```
 
-Runs Ruff, pytest, ESLint, TypeScript, Vitest and a production build.
+Runs Ruff (lint and format), pytest, ESLint, TypeScript, Vitest (including axe-core
+accessibility checks) and a production build. Tests use synthetic data and need no
+network. Tests that need the official files or trained artefacts skip themselves when
+those are absent; once they exist, they also check that the generated documents and this
+README's results match the artefacts. The same checks run in
+[GitHub Actions](.github/workflows/ci.yml) on every push, without downloading data or
+training models.
 
-## Roadmap
+## Documentation
 
-| Phase | Scope | Status |
-| ----- | ----- | ------ |
-| 1 | Foundation & architecture | ✅ Complete |
-| 2 | Real dataset & Data Explorer | ✅ Complete |
-| 3 | Preprocessing & feature engineering | ✅ Complete |
-| 4 | Statistics & exploratory data analysis | ✅ Complete |
-| 5 | Machine learning & model evaluation | ✅ Complete |
-| 6 | Interpretability & academic risk analysis | ✅ Complete |
-| 7 | End-to-end backend integration | ✅ Complete |
-| 8 | Complete Apple-style frontend | ✅ Complete |
-| 9 | Final validation, documentation & presentation readiness | Planned |
+| Document | Contents |
+| --- | --- |
+| [METHODOLOGY.md](docs/METHODOLOGY.md) | Every analytical decision, its rationale and limitations |
+| [STATISTICAL_FINDINGS.md](docs/STATISTICAL_FINDINGS.md) | Research questions, tests and effect sizes (generated) |
+| [ML_RESULTS.md](docs/ML_RESULTS.md) | All models, folds, selections and error analysis (generated) |
+| [INTERPRETABILITY.md](docs/INTERPRETABILITY.md) | Importance, calibration and risk profiles (generated) |
+| [DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) | The 33 attributes and their codes (generated) |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components, diagrams, data flow and security posture |
+| [API.md](docs/API.md) | Endpoints, examples, error codes and timings |
+| [REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | Fresh-clone procedure and regeneration commands |
+| [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) | Accessibility checks and browser coverage |
+| [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) | What each of the nine phases delivered |
 
-## Licence
+## Limitations and responsible use
 
-The **software** in this repository is released under the [MIT License](LICENSE).
-The **dataset** is not part of the repository. It is published by UCI under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), which requires attribution
-to Cortez & Silva (2008). The MIT licence does not apply to the data.
+- **Scope of the data.** Two Portuguese schools in 2005–2006; results may not transfer to
+  other schools, years or education systems.
+- **Observational, cross-sectional data.** Associations and model reliance are not causes;
+  sensitivity experiments describe model behaviour, not interventions.
+- **No dropout outcome.** The system estimates academic risk (G3 < 10) and never claims to
+  predict dropout.
+- **Modest early prediction.** Without period grades, the selected classifiers missed about
+  half of the held-out at-risk students. A missing flag is not evidence that a student is
+  fine.
+- **Uncalibrated probabilities.** Class-weighted probabilities order students; they are
+  not the chance of failing.
+- **Small test sets** (79 and 130 students) make test metrics, importance and calibration
+  noisy. `G3 = 0` probably sometimes means the final assessment was not taken.
+- **Local academic prototype.** No authentication, authorisation or rate limiting; CORS is
+  restricted to the configured origin. Do not deploy it publicly without adding them.
 
-## Limitations and ethics
+Predictions and suggestions are for educational analysis and discussion between a student
+and a teacher or adviser. They do not determine a student's ability or future, must not be
+used for automated, disciplinary or high-stakes decisions, and no demographic group is
+labelled as at risk.
 
-Predictions describe statistical associations in one historical dataset from two
-Portuguese schools and must not be used to make automated decisions about individual
-students. Sensitive attributes (e.g. sex, family circumstances) will be analysed for
-association but treated with care in any model intended for intervention support.
+## Future scope
+
+- Validation on more recent cohorts or other schools — and a dataset with a genuine
+  dropout outcome before any dropout claim.
+- Probability calibration on a separate calibration set, and a decision threshold informed
+  by the real cost of an intervention.
+- A fairness analysis across sensitive attributes, with its methodology documented first.
+- Authentication, rate limiting and audit logging before any deployment beyond a local
+  machine.
+
+## Credits and licence
+
+- **Author:** Soyeb Mohammad — ISPA undergraduate AI & Data Analytics project.
+- **Data:** P. Cortez and A. M. G. Silva, UCI Machine Learning Repository, CC BY 4.0. The
+  data are not redistributed here; attribution is required when using them.
+- **Reference:** Cortez & Silva (2008), cited above.
+- **Software licence:** [MIT](LICENSE). It covers the code only, not the dataset (see [NOTICE](NOTICE)).
+
+Project history and phase-by-phase scope: [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).

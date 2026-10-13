@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Cohort } from "@/lib/api";
@@ -271,5 +272,16 @@ describe("DataExplorer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
     expect(await screen.findByRole("heading", { name: "Mathematics" })).toBeInTheDocument();
+  });
+});
+
+describe("DataExplorer accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    mockApi();
+    const { container } = render(<DataExplorer />);
+    await screen.findByText("Rows 1–25 of 30");
+    await expectNoAxeViolations(container);
   });
 });

@@ -28,12 +28,18 @@ export function Heatmap({ data }: { data: CorrelationMatrix }) {
       title="Spearman correlation matrix"
       subtitle={`n = ${data.n} · blue = positive, red = negative · ✱ = BH-adjusted p < .05`}
       table={{
-        headers: ["", ...data.variables],
+        headers: ["Variable", ...data.variables],
         rows: data.variables.map((v, i) => [v, ...data.r[i].map((r) => fmt(r))]),
       }}
     >
       {(setTooltip) => (
-        <div ref={ref} className="overflow-x-auto">
+        <div
+          ref={ref}
+          tabIndex={0}
+          role="region"
+          aria-label="Correlation heatmap (scrollable)"
+          className="overflow-x-auto"
+        >
           <svg
             viewBox={`0 0 ${size} ${topPad + k * cell}`}
             className="h-auto w-full min-w-[520px]"

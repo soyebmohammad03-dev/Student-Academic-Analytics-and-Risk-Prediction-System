@@ -99,11 +99,16 @@ function PairTable({ pair }: { pair: Pair }) {
     return found ? (kind === "row" ? found.row_label : found.column_label) : key;
   };
   return (
-    <Card className="p-4 sm:p-5">
+    <Card className="min-w-0 p-4 sm:p-5">
       <p className="text-[14px] font-semibold text-text">
         {pair.rows_label} × {pair.columns_label}
       </p>
-      <div className="mt-3 overflow-x-auto">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label={`${pair.rows_label} by ${pair.columns_label} (scrollable)`}
+        className="mt-3 overflow-x-auto"
+      >
         <table className="w-full min-w-[320px] border-separate border-spacing-1 text-[12px] tabular-nums">
           <caption className="sr-only">
             Observed share below the pass mark by {pair.rows_label} and {pair.columns_label}
@@ -137,14 +142,14 @@ function PairTable({ pair }: { pair: Pair }) {
                       title={`${x.at_risk} of ${x.n} · 95% CI ${fmtInterval(x.risk_ci)}`}
                       style={{
                         background: x.reliable
-                          ? `color-mix(in srgb, var(--chart-2) ${Math.round(6 + 0.5 * share)}%, transparent)`
+                          ? `color-mix(in srgb, var(--chart-2) ${Math.round(6 + 0.34 * share)}%, transparent)`
                           : "var(--fill)",
                       }}
                     >
-                      <span className={x.reliable ? "text-text" : "text-text-tertiary"}>
+                      <span className={x.reliable ? "text-text" : "text-text-secondary"}>
                         {x.risk_percent === null ? "—" : `${x.risk_percent.toFixed(0)}%`}
                       </span>
-                      <span className="block text-[10px] text-text-tertiary">
+                      <span className="block text-[10px] text-text">
                         n = {x.n}
                         {x.reliable ? "" : " · few"}
                       </span>

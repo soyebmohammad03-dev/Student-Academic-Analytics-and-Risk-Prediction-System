@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RiskAnalysisView } from "./RiskAnalysisView";
@@ -170,5 +171,16 @@ describe("RiskAnalysisView", () => {
     render(<RiskAnalysisView />);
     expect(screen.getByLabelText("Loading risk profiles")).toBeInTheDocument();
     expect(screen.getByLabelText("Loading classifier results")).toBeInTheDocument();
+  });
+});
+
+describe("RiskAnalysisView accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    mockApi();
+    const { container } = render(<RiskAnalysisView />);
+    await screen.findByText("Fixture classifier");
+    await expectNoAxeViolations(container);
   });
 });

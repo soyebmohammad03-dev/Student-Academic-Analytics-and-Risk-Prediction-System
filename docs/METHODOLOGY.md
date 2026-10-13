@@ -1,7 +1,8 @@
 # Methodology
 
-This document fixes the analytical decisions that must hold before any result is
-reported. It will be extended phase by phase; nothing here is a result.
+This document fixes the analytical decisions that every reported result follows. It was
+written phase by phase alongside the code; results themselves are in the generated
+documents (`STATISTICAL_FINDINGS.md`, `ML_RESULTS.md`, `INTERPRETABILITY.md`).
 
 ## 1. Research basis
 
@@ -866,3 +867,54 @@ the same quantities in the same way:
   ranked by value. Phase 6 had ranked them by absolute value, which could place a small
   negative permutation value (no measurable reliance) near the top. The values were
   unchanged; the ranking and the generated report were rebuilt without retraining.
+
+## 9. Final validation, limitations and responsible use (Phase 9)
+
+### 9.1 Independent checks against the artefacts
+
+Before the final release, the following were re-checked directly against the data files
+and the persisted artefacts, outside the normal test suite:
+
+- **Data.** `student-mat.csv` is 395 × 33 (130 students with G3 < 10, 38 with G3 = 0);
+  `student-por.csv` is 649 × 33 (100 and 15). Both still match their pinned SHA-256
+  checksums. Only the download command writes to `data/`.
+- **Leakage.** None of the 12 persisted pipelines lists `G3` or `at_risk` among its input
+  columns; early models use neither `G1` nor `G2`, mid-year models use `G1` only and
+  full-history models use both.
+- **Selection.** Re-applying the rule of §6.8 to the cross-validation results alone
+  reproduces all 12 selected models. The test set plays no part.
+- **Generated documents.** `DATA_DICTIONARY.md`, `STATISTICAL_FINDINGS.md`,
+  `ML_RESULTS.md`, `INTERPRETABILITY.md` and the README results block are compared with
+  freshly rendered output by tests whenever data and artefacts are present.
+- **Reproducibility.** A fresh clone rebuilt the data, models and documents and passed
+  every test ([REPRODUCIBILITY.md](REPRODUCIBILITY.md)).
+
+### 9.2 Overall limitations
+
+- **Generalisation.** Two Portuguese schools, one school year (2005–2006), two subjects.
+  No result is validated on another population.
+- **Observational data.** All statistical findings are associations; explanations and
+  importances describe model behaviour; sensitivity experiments are not interventions.
+- **Outcome.** Academic risk is a final grade below 10. The data contain no dropout
+  outcome, and no claim about dropout is made.
+- **Early prediction is weak.** Without period grades, the selected classifiers recover
+  about half of the held-out students below the pass mark (`ML_RESULTS.md`).
+- **Uncertainty.** Test sets of 79 and 130 students; probabilities are class-weighted and
+  not calibrated; `G3 = 0` may record a missed final assessment rather than low
+  attainment.
+
+### 9.3 Responsible use
+
+The system is an educational and analytical prototype. Its outputs are meant to support
+reflection and discussion between a student and a teacher or adviser:
+
+- they must not be used for automated, disciplinary, admission or other high-stakes
+  decisions about individuals;
+- a prediction or flag is a statistical estimate, not a judgement of ability, effort or
+  future; the absence of a flag is not evidence that a student needs no support;
+- demographic and family attributes are analysed only as associations and never trigger
+  suggestions, and no demographic group is labelled as at risk;
+- suggestions are general prompts shown only when the cohort's data support them, and are
+  never punitive, clinical or family judgements;
+- the application has no authentication or rate limiting and is intended to run locally.
+

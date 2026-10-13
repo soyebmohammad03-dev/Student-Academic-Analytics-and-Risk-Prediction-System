@@ -14,8 +14,8 @@ meaningful commit and a push. Phases are never combined into a single commit.
 | 5     | Machine learning & model evaluation         | ✅ Complete |
 | 6     | Interpretability & academic risk analysis   | ✅ Complete |
 | 7     | End-to-end backend integration              | ✅ Complete |
-| 8     | Complete Apple-style frontend               | Planned     |
-| 9     | Final validation, documentation & presentation readiness | Planned |
+| 8     | Complete Apple-style frontend               | ✅ Complete |
+| 9     | Final validation, documentation & presentation readiness | ✅ Complete |
 
 The roadmap was revised to nine phases after Phase 2. Preprocessing now comes before
 statistics so that both statistics and modelling build on the same analytical dataset.
@@ -169,8 +169,34 @@ statistics so that both statistics and modelling build on the same analytical da
   scenario changes, loading/error/empty states, chart data, prediction validation,
   leakage prevention and keyboard interaction.
 
-## Phase 9 — Final validation, documentation & presentation readiness
-- End-to-end verification and a reproducibility check from a clean clone.
-- Final README and methodology write-up, screenshots, and a limitations and ethics
-  section.
-- Presentation material.
+## Phase 9 — Final validation, documentation & presentation readiness ✅
+- **Scientific audit** against the data and artefacts: cohort sizes and at-risk counts,
+  raw-file checksums, no `G3`/`at_risk` in any persisted pipeline, scenario-correct
+  grades, and the CV-only selection rule reproducing all 12 choices
+  (METHODOLOGY §9). Stale statements fixed: `/project` reported finished modules as in
+  progress, and the data dictionary still described a completed sensitivity check as
+  planned.
+- **Fresh-clone reproducibility**: clone → install → download → train → interpret →
+  tests → API ready → frontend build, all passing; regenerated documents identical except
+  a numpy patch version ([docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)).
+- **Interface fixes**: no flash of default cohort/scenario (client-only views); phone
+  layouts for the dashboard model matrix and a sticky model column in the leaderboard;
+  no page-level horizontal overflow from 320 px up; WCAG AA contrast in both themes;
+  definition-list, scroll-region and table-header semantics
+  ([docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md)).
+- **Automated accessibility**: axe-core in Vitest for every page view, and in the browser
+  on all routes at five widths and both themes (0 violations).
+- **Cross-browser**: Chromium and WebKit verified; Firefox could not be launched on the
+  test machine and is documented as untested.
+- **Security and dependencies**: `pip-audit` found no known vulnerabilities; production npm
+  dependencies have none (five advisories affect only the dev-time ESLint toolchain, whose
+  suggested fix is a breaking downgrade); no secrets, data or artefacts tracked; security
+  posture documented (no authentication or rate limiting — local prototype).
+- **Repository showcase**: rewritten README with banner, badges, Mermaid architecture,
+  workflow diagram, generated results tables (tested against the artefacts) and real
+  screenshots; architecture diagrams and security notes; GitHub description and topics;
+  `LICENSE` restored to the standard MIT text with the dataset terms in `NOTICE`.
+- **CI**: GitHub Actions runs Ruff, pytest, ESLint, TypeScript, Vitest and the production
+  build on every push, without downloading data or training models.
+
+The nine-phase roadmap is complete.

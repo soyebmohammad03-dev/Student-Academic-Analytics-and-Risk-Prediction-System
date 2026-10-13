@@ -1,5 +1,6 @@
 "use client";
 
+import { MetricCard as Figure } from "@/components/ui/MetricCard";
 import { useState } from "react";
 
 import { DataUnavailable } from "@/components/data-explorer/states";
@@ -32,18 +33,6 @@ function forCohort<T extends { cohort: string }>(data: T | undefined, cohort: st
 
 function Loading({ height = "h-40" }: { height?: string }) {
   return <Skeleton className={`${height} w-full rounded-2xl`} />;
-}
-
-function Figure({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="bg-surface px-5 py-4">
-      <dt className="text-[12px] font-medium text-text-secondary">{label}</dt>
-      <dd className="mt-1 font-display text-[24px] leading-none font-semibold tracking-[-0.02em] text-text tabular-nums">
-        {value}
-      </dd>
-      {hint && <p className="mt-1.5 text-[11px] text-text-tertiary tabular-nums">{hint}</p>}
-    </div>
-  );
 }
 
 export function StatisticsView() {

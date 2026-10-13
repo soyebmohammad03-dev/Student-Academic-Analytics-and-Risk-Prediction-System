@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="t d">
+  <title id="t">Analytical workflow</title>
+  <desc id="d">Seven stages from the raw UCI files to the web application: validation, preprocessing, statistics, exploratory analysis, model comparison, interpretability and academic-risk analysis, then the API and interface. Guard rails listed below: no leakage, cross-validation-only selection, observed versus predicted kept separate.</desc>
+  <style>
+    .t { font-family: Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+    .h { font-size: 16px; font-weight: 650; fill: #0f2a4a; }
+    .s { font-size: 12.5px; fill: #4a5b72; }
+    .n { font-size: 12px; font-weight: 700; fill: #14808c; letter-spacing: 1px; }
+    .card { fill: #ffffff; stroke: #0f2a4a; stroke-opacity: 0.12; }
+  </style>
+  <rect width="1280" height="420" rx="20" fill="#f7f9fc"/>
+  <text x="48" y="54" class="t" font-size="22" font-weight="700" fill="#0f2a4a">Analytical workflow</text>
+  <text x="48" y="80" class="t s">Each stage reads the output of the one before it. Raw files are never modified; models are trained offline; the API only reads results.</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#14808c"/>
+    </marker>
+  </defs>
+
+  <g class="t">
+    <!-- Row of stages: x positions 48 + i*172, width 156 -->
+    <g transform="translate(48 112)">
+      <rect class="card" width="156" height="150" rx="14"/>
+      <text x="16" y="28" class="n">01</text>
+      <text x="16" y="54" class="h">Data</text>
+      <text x="16" y="78" class="s">UCI files, SHA-256</text>
+      <text x="16" y="96" class="s">pinned; schema and</text>
+      <text x="16" y="114" class="s">range validation</text>
+    </g>
+    <g transform="translate(220 112)">
+      <rect class="card" width="156" height="150" rx="14"/>
+      <text x="16" y="28" class="n">02</text>
+      <text x="16" y="54" class="h">Preprocessing</text>
+      <text x="16" y="78" class="s">Targets, scenarios,</text>
+      <text x="16" y="96" class="s">encoding; stratified</text>
+      <text x="16" y="114" class="s">80/20 split (seed 42)</text>
+    </g>
+    <g transform="translate(392 112)">
+      <rect class="card" width="156" height="150" rx="14"/>
+      <text x="16" y="28" class="n">03</text>
+      <text x="16" y="54" class="h">Statistics</text>
+      <text x="16" y="78" class="s">Descriptives, tests,</text>
+      <text x="16" y="96" class="s">effect sizes, Holm /</text>
+      <text x="16" y="114" class="s">BH corrections</text>
+    </g>
+    <g transform="translate(564 112)">
+      <rect class="card" width="156" height="150" rx="14"/>
+      <text x="16" y="28" class="n">04</text>
+      <text x="16" y="54" class="h">Exploration</text>
+      <text x="16" y="78" class="s">Distributions, box</text>
+      <text x="16" y="96" class="s">plots, scatter, heat-</text>
+      <text x="16" y="114" class="s">map, risk profile</text>
+    </g>
+    <g transform="translate(736 112)">
+      <rect class="card" width="156" height="150" rx="14"/>
+      <text x="16" y="28" class="n">05</text>
+      <text x="16" y="54" class="h">Modelling</text>
+      <text x="16" y="78" class="s">Nested 5×5 CV,</text>
+      <text x="16" y="96" class="s">baselines, one-SE</text>
+      <text x="16" y="114" class="s">selection, test once</text>
+    </g>
+    <g transform="translate(908 112)">
+      <rect class="card" width="156" height="150" rx="14"/>
+      <text x="16" y="28" class="n">06</text>
+      <text x="16" y="54" class="h">Interpretation</text>
+      <text x="16" y="78" class="s">Shapley, permutation,</text>
+      <text x="16" y="96" class="s">calibration, group</text>
+      <text x="16" y="114" class="s">risk profiles</text>
+    </g>
+    <g transform="translate(1080 112)">
+      <rect width="152" height="150" rx="14" fill="#0f2a4a"/>
+      <text x="16" y="28" class="n" style="fill:#7fd3db">07</text>
+      <text x="16" y="54" class="h" style="fill:#ffffff">Application</text>
+      <text x="16" y="78" class="s" style="fill:#d6e2f0">FastAPI reads the</text>
+      <text x="16" y="96" class="s" style="fill:#d6e2f0">artefacts; Next.js</text>
+      <text x="16" y="114" class="s" style="fill:#d6e2f0">shows real results</text>
+    </g>
+    <g stroke="#14808c" stroke-width="2" marker-end="url(#arrow)">
+      <line x1="205" y1="187" x2="218" y2="187"/>
+      <line x1="377" y1="187" x2="390" y2="187"/>
+      <line x1="549" y1="187" x2="562" y2="187"/>
+      <line x1="721" y1="187" x2="734" y2="187"/>
+      <line x1="893" y1="187" x2="906" y2="187"/>
+      <line x1="1065" y1="187" x2="1078" y2="187"/>
+    </g>
+
+    <!-- Guard rails -->
+    <g transform="translate(48 292)">
+      <rect width="1184" height="96" rx="14" fill="#e8f3f4"/>
+      <text x="24" y="34" class="n">GUARD RAILS</text>
+      <text x="24" y="62" class="s" style="font-size:13.5px;fill:#0f2a4a">G3 and the risk label are never inputs · G1/G2 only where the scenario allows · preprocessing fitted on training folds only</text>
+      <text x="24" y="82" class="s" style="font-size:13.5px;fill:#0f2a4a">Selection by cross-validation, never the test set · observed group statistics kept apart from model outputs · associations, not causes</text>
+    </g>
+  </g>
+</svg>

@@ -19,6 +19,84 @@
                                └──────────────────────────────────────────────────┘
 ```
 
+## System diagram
+
+```mermaid
+flowchart TB
+    subgraph Offline["Offline — run once, from backend/"]
+        DL["analytics.data.download<br/>download + SHA-256 check"] --> RAW[("data/raw<br/>student-mat.csv · student-por.csv")]
+        RAW --> TR["analytics.ml.train<br/>nested CV · selection · test once"]
+        TR --> MOD[("models/<br/>ml_results.json · selected/*.joblib + *.json")]
+        MOD --> IB["analytics.interpret.build<br/>importance · calibration"]
+        IB --> MOD
+        TR --> DOC1["docs/ML_RESULTS.md · README results"]
+        IB --> DOC2["docs/INTERPRETABILITY.md"]
+    end
+    subgraph API["backend/app — FastAPI, read-only"]
+        PIPE["AnalyticsPipeline<br/>FileCache keyed on file version"]
+        SVC["services → routes /api/v1"]
+        PIPE --> SVC
+    end
+    subgraph UI["frontend — Next.js"]
+        PAGES["pages (client views)<br/>useApi · useApiPost · usePost"]
+    end
+    RAW --> PIPE
+    MOD --> PIPE
+    SVC -- "JSON, X-Request-ID,<br/>{code, detail} errors" --> PAGES
+```
+
+## Analytical workflow
+
+```mermaid
+flowchart LR
+    A["Validate<br/>schema · codes · ranges"] --> B["Prepare<br/>targets · scenarios · split"]
+    B --> C["Statistics<br/>RQ1–RQ8 · effect sizes · Holm/BH"]
+    B --> D["EDA<br/>chart aggregates"]
+    B --> E["Models<br/>nested CV · one-SE selection"]
+    E --> F["Held-out test<br/>scored once"]
+    E --> G["Interpretation<br/>Shapley · permutation · calibration"]
+    B --> H["Risk profiles<br/>Wilson CIs · χ²/Fisher"]
+    C & D & F & G & H --> I["API + interface"]
+```
+
+## Frontend–backend communication
+
+```mermaid
+sequenceDiagram
+    participant U as Browser (Next.js page)
+    participant A as FastAPI /api/v1
+    participant P as AnalyticsPipeline
+    U->>A: GET /models/evaluations?cohort=math&task=classification&scenario=early
+    A->>P: ml_results() (cached per file version)
+    P-->>A: typed results
+    A-->>U: 200 JSON + X-Request-ID
+    Note over U: The view shows data only if its cohort/task/scenario<br/>match the current selection; superseded requests are aborted.
+    U->>A: POST /models/predict {cohort, task, scenario, features}
+    A->>P: validate record (no G3/at_risk, grades only if allowed)
+    alt valid
+        P-->>A: prediction from the selected persisted model
+        A-->>U: 200 PredictionResult
+    else invalid
+        A-->>U: 422 {code: "invalid_record", detail}
+    end
+```
+
+The frontend is a static Next.js build whose pages render in the browser
+(`ClientView`), because they depend on the URL and on the tab's stored cohort/scenario
+selection. All data comes from the API at `NEXT_PUBLIC_API_BASE_URL`; the API allows
+browser requests only from `SAARPS_CORS_ORIGINS`.
+
+## Security posture
+
+This is a local academic prototype. The API has **no authentication, authorisation or
+rate limiting**; it serves public UCI data and model outputs only, rejects malformed
+input with typed 422 errors, never returns paths, settings or stack traces, restricts CORS
+to the configured origins and only allows `GET`/`POST`. Interactive OpenAPI docs are
+enabled. `.joblib` artefacts are pickles: the loader verifies each file's SHA-256 against
+its metadata, and only artefacts produced by this pipeline should ever be loaded. Before
+any public deployment, add authentication, rate limiting, HTTPS termination and audit
+logging, and review the records endpoint.
+
 ## Principles
 
 - **Training is separate from inference.** Models are trained offline by scripts in
@@ -127,9 +205,10 @@ Phase 5 composes `Pipeline([("prep", build_preprocessor(s)), ("model", estimator
 and fits it on `split.X_train` (see below). Training stays offline; the API only reads
 results and persisted pipelines.
 
-`app/services/preprocessing.py` builds each report once per cohort version, reusing
-the `DatasetStore` cache, and exposes it through a single metadata endpoint. The
-frontend does not depend on it in this phase.
+`app/services/preprocessing.py` serves the report that the `AnalyticsPipeline` builds once
+per cohort version (`CohortVersion.preprocessing_report`) through a single metadata
+endpoint. The
+frontend does not call it; it documents the preprocessing for API clients.
 
 ## Statistics layer (Phase 4)
 

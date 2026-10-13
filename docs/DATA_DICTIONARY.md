@@ -50,7 +50,7 @@ classification (UCI lists coded ordinal scales such as `Medu` as numeric).
 - **`G1`**: Known after the first period. Only a legitimate input in scenarios A and B.
 - **`G2`**: Known after the second period. Only a legitimate input in scenario A.
 - **`G3`**: Primary performance target. Never used as an input to predict itself or a label derived from it.
-- **`G3`**: A value of 0 is within the documented range but may indicate a student who did not sit the final evaluation. Rows are kept and count as at risk (Phase 3); a sensitivity check is planned for Phase 5.
+- **`G3`**: A value of 0 is within the documented range but may indicate a student who did not sit the final evaluation. Rows are kept and count as at risk; sensitivity checks without them are reported in STATISTICAL_FINDINGS.md and ML_RESULTS.md.
 
 ## Derived targets
 

@@ -48,7 +48,12 @@ function Block({
 
 function Table({ head, rows }: { head: string[]; rows: string[][] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-separator">
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label={`${head.join(", ")} (scrollable table)`}
+      className="overflow-x-auto rounded-xl border border-separator"
+    >
       <table className="w-full min-w-[480px] text-left text-[13px]">
         <thead className="bg-surface-muted text-[11px] text-text-tertiary">
           <tr>

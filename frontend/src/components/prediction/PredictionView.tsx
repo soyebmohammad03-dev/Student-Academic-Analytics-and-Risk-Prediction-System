@@ -94,12 +94,14 @@ function RiskCard({ result, percentile }: { result: PredictionResult; percentile
       <dl className="mt-3 space-y-1.5 text-[13px] leading-5 text-text-secondary">
         {result.probability !== null ? (
           <div className="flex flex-wrap items-center gap-1">
-            <dt>Model probability</dt>
+            <dt className="inline-flex items-center gap-1">
+              Model probability
+              <InfoTip label="About this probability">
+                The model was trained with balanced class weights, so this score orders students by
+                estimated risk but is not a calibrated chance of falling below the pass mark.
+              </InfoTip>
+            </dt>
             <dd className="font-medium text-text tabular-nums">{fmt(result.probability, 2)}</dd>
-            <InfoTip label="About this probability">
-              The model was trained with balanced class weights, so this score orders students by
-              estimated risk but is not a calibrated chance of falling below the pass mark.
-            </InfoTip>
             <dd className="w-full text-[12px] text-text-tertiary">
               Flag when ≥ {result.threshold}; class-weighted, not calibrated.
             </dd>
@@ -116,8 +118,13 @@ function RiskCard({ result, percentile }: { result: PredictionResult; percentile
         {percentile !== null && (
           <div>
             <dt className="inline">Score percentile among training students: </dt>
-            <dd className="inline font-medium text-text tabular-nums">{percentile.toFixed(0)}</dd>
-            <span className="text-text-tertiary"> (context, not a risk category)</span>
+            <dd className="inline font-medium text-text tabular-nums">
+              {percentile.toFixed(0)}
+              <span className="font-normal text-text-tertiary">
+                {" "}
+                (context, not a risk category)
+              </span>
+            </dd>
           </div>
         )}
       </dl>
@@ -389,7 +396,7 @@ export function PredictionView() {
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-separator pt-5">
               <button
                 type="submit"
-                className="h-10 rounded-full bg-accent px-6 text-[14px] font-medium text-white transition-opacity hover:opacity-90"
+                className="h-10 rounded-full bg-accent-fill px-6 text-[14px] font-medium text-white transition-opacity hover:opacity-90"
               >
                 Predict
               </button>

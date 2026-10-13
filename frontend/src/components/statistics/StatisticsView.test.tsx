@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { statisticsResponse } from "@/test/statisticsFixtures";
@@ -69,5 +70,16 @@ describe("StatisticsView", () => {
     );
     render(<StatisticsView />);
     expect(await screen.findByText("The dataset has not been downloaded")).toBeInTheDocument();
+  });
+});
+
+describe("StatisticsView accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    mockApi();
+    const { container } = render(<StatisticsView />);
+    await screen.findByText("Welch's t-test");
+    await expectNoAxeViolations(container);
   });
 });

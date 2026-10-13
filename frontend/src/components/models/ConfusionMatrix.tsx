@@ -61,13 +61,13 @@ export function ConfusionMatrix({ confusion, caption }: { confusion: Confusion; 
                     title={cell.name}
                     className="rounded-xl px-2 py-3 text-center tabular-nums"
                     style={{
-                      background: `color-mix(in srgb, ${cell.correct ? "var(--chart-1)" : "var(--chart-2)"} ${Math.round(8 + 40 * share)}%, transparent)`,
+                      background: `color-mix(in srgb, ${cell.correct ? "var(--chart-1)" : "var(--chart-2)"} ${Math.round(8 + 32 * share)}%, transparent)`,
                     }}
                   >
                     <span className="block font-display text-[20px] leading-none font-semibold text-text">
                       {cell.v}
                     </span>
-                    <span className="mt-1 block text-[11px] text-text-secondary">
+                    <span className="mt-1 block text-[11px] text-text">
                       {(100 * share).toFixed(0)}% · {cell.name.split(" (")[0]}
                     </span>
                   </td>

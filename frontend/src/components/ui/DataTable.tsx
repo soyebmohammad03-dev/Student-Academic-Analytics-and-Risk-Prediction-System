@@ -20,7 +20,12 @@ export function DataTable<T>({
   caption?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-2xl bg-surface shadow-card">
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label={caption ? `${caption} (scrollable)` : "Table (scrollable)"}
+      className="overflow-x-auto rounded-2xl bg-surface shadow-card"
+    >
       <table className="w-full text-left text-[13px]">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -188,5 +189,18 @@ describe("PredictionView", () => {
     render(<PredictionView />);
     expect(screen.getByText("For educational analysis only")).toBeInTheDocument();
     expect(screen.getByText(/not dropout/)).toBeInTheDocument();
+  });
+});
+
+describe("PredictionView accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    routes();
+    const { container } = render(<PredictionView />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: "Predict" }));
+    await screen.findByText("Fixture disclaimer.");
+    await expectNoAxeViolations(container);
   });
 });

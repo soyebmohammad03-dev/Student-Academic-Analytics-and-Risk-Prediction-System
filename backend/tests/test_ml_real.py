@@ -151,6 +151,17 @@ def test_ml_results_document_is_current():
 
 
 @persisted
+def test_readme_results_match_the_training_run():
+    from analytics.ml.report import README, README_END, README_START, readme_results
+
+    text = README.read_text(encoding="utf-8")
+    start, end = text.index(README_START), text.index(README_END) + len(README_END)
+    assert text[start:end] == readme_results(load_results(DEFAULT_MODELS_DIR)), (
+        "README.md results are stale: run `python -m analytics.ml.train --report-only`"
+    )
+
+
+@persisted
 def test_persisted_models_predict_for_a_real_record():
     from analytics.ml import PredictionService
 

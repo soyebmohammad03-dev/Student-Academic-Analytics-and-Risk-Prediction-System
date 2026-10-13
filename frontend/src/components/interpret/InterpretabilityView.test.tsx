@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -234,5 +235,16 @@ describe("sensitivity scale", () => {
     } as never);
     expect(hi - lo).toBe(2);
     expect(lo).toBeLessThan(-0.13);
+  });
+});
+
+describe("InterpretabilityView accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    routes();
+    const { container } = render(<InterpretabilityView />);
+    await screen.findByText("Fixture reading.");
+    await expectNoAxeViolations(container);
   });
 });

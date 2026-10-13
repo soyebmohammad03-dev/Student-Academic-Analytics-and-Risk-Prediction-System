@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { expectNoAxeViolations } from "@/test/axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { json, mockFetch } from "@/test/api";
@@ -232,5 +233,16 @@ describe("ModelComparisonView", () => {
     });
     render(<ModelComparisonView />);
     expect(await screen.findByText("The models have not been trained")).toBeInTheDocument();
+  });
+});
+
+describe("ModelComparisonView accessibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no axe violations once data is shown", async () => {
+    routes();
+    const { container } = render(<ModelComparisonView />);
+    await screen.findByText("Fixture selection reason.");
+    await expectNoAxeViolations(container);
   });
 });

@@ -30,7 +30,7 @@ export function ChartFrame({
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   return (
-    <figure className={cn("rounded-2xl bg-surface p-4 shadow-card sm:p-5", className)}>
+    <figure className={cn("min-w-0 rounded-2xl bg-surface p-4 shadow-card sm:p-5", className)}>
       <figcaption className="mb-3">
         <p className="text-[14px] font-semibold text-text">{title}</p>
         {subtitle && <p className="mt-0.5 text-[12px] text-text-secondary">{subtitle}</p>}
@@ -52,7 +52,12 @@ export function ChartFrame({
           <summary className="cursor-pointer text-text-secondary select-none hover:text-text">
             Show data
           </summary>
-          <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-separator">
+          <div
+            tabIndex={0}
+            role="region"
+            aria-label={`${title}: data table`}
+            className="mt-2 max-h-64 overflow-auto rounded-lg border border-separator"
+          >
             <table className="w-full text-left tabular-nums">
               <thead className="sticky top-0 bg-surface-muted text-text-tertiary">
                 <tr>
