@@ -18,7 +18,7 @@ MODULES: tuple[AnalyticsModule, ...] = (
     AnalyticsModule(key="statistics", name="Statistical Analysis", phase=4, status="available"),
     AnalyticsModule(key="eda", name="Exploratory Data Analysis", phase=4, status="available"),
     AnalyticsModule(key="prediction", name="Prediction", phase=6, status="planned"),
-    AnalyticsModule(key="models", name="Model Comparison", phase=5, status="planned"),
+    AnalyticsModule(key="models", name="Model Comparison", phase=5, status="in_progress"),
     AnalyticsModule(key="risk", name="Risk Analysis", phase=6, status="planned"),
 )
 

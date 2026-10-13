@@ -11,7 +11,7 @@ meaningful commit and a push. Phases are never combined into a single commit.
 | 2     | Real dataset & Data Explorer                | ✅ Complete |
 | 3     | Preprocessing & feature engineering         | ✅ Complete |
 | 4     | Statistics & exploratory data analysis      | ✅ Complete |
-| 5     | Machine learning & model evaluation         | Planned     |
+| 5     | Machine learning & model evaluation         | ✅ Complete |
 | 6     | Interpretability & academic risk analysis   | Planned     |
 | 7     | End-to-end backend integration              | Planned     |
 | 8     | Complete Apple-style frontend               | Planned     |
@@ -69,21 +69,27 @@ statistics so that both statistics and modelling build on the same analytical da
 - Functional Statistical Analysis and EDA pages with reusable, accessible SVG charts.
   Final polish is Phase 8.
 
-## Phase 5 — Machine learning & model evaluation
-- Baselines: mean predictor and majority class.
-- Regression candidates: Linear (regularised), Decision Tree, Random Forest.
-- Classification candidates: Logistic Regression, Decision Tree, Random Forest, KNN
-  and SVM. Each is retained only where the evidence supports it.
-- Every model is a `Pipeline(build_preprocessor(scenario), estimator)`, run with
-  stratified CV on the training split and tuned only where justified. The held-out
-  test split is used once.
-- Metrics:
-  - regression: MAE, MSE, RMSE, R²;
-  - classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix.
-- Results reported per cohort and per scenario.
-- A sensitivity check on `G3 = 0` rows. Phase 4 found that every such student has 0
-  absences, and that this changes the absence–G3 relationship in Mathematics.
-- Persisted artifacts with metadata.
+## Phase 5 — Machine learning & model evaluation ✅
+- `backend/analytics/ml/`:
+  - model registry with bounded search spaces;
+  - nested cross-validation (5 × 5) on the training split, and one-off test scoring;
+  - metrics, including ROC-AUC from scores with undefined cases handled;
+  - a CV-only selection rule (one SE, simplest model);
+  - error analysis and automated diagnostics;
+  - comparison tables, persistence, a prediction service and a generated report.
+- Models:
+  - baselines: mean predictor, majority class;
+  - regression: linear regression, decision tree, random forest;
+  - classification: logistic regression, decision tree, k-NN, SVM (RBF), random forest.
+  Class imbalance is handled with balanced class weights, without resampling.
+- Results for both cohorts × three scenarios (early, mid-year, full history), with
+  scenario and cohort comparisons and a zero-grade sensitivity check.
+- 12 selected pipelines persisted with metadata and checksums (git-ignored;
+  `python -m analytics.ml.train` regenerates them).
+- API: `/models`, `/models/{regression,classification,evaluations,scenario-comparison,
+  cohort-comparison,selected}` and `POST /models/predict`.
+- `docs/ML_RESULTS.md`, generated from the training run.
+- The model-comparison page is marked in progress. Its UI is Phase 8.
 
 ## Phase 6 — Interpretability & academic risk analysis
 - Permutation importance, partial dependence and per-prediction explanations.

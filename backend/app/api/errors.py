@@ -5,6 +5,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from analytics.data import DatasetNotFoundError
+from analytics.ml import InvalidRecordError, ModelArtifactError, ModelNotAvailableError
+from analytics.preprocessing import LeakageError
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -13,6 +15,28 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"code": "dataset_unavailable", "detail": str(exc)},
+        )
+
+    @app.exception_handler(ModelArtifactError)
+    async def models_missing(_: Request, exc: ModelArtifactError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"code": "models_unavailable", "detail": str(exc)},
+        )
+
+    @app.exception_handler(ModelNotAvailableError)
+    async def model_not_persisted(_: Request, exc: ModelNotAvailableError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"code": "model_not_available", "detail": str(exc)},
+        )
+
+    @app.exception_handler(InvalidRecordError)
+    @app.exception_handler(LeakageError)
+    async def invalid_record(_: Request, exc: ValueError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"code": "invalid_record", "detail": str(exc)},
         )
 
     @app.exception_handler(RequestValidationError)

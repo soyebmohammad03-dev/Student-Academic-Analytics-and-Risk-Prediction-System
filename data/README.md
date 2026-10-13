@@ -91,8 +91,11 @@ Data Explorer or `GET /api/v1/dataset/quality`.
   project predicts final performance (`G3`) and *academic risk* (failing the final
   assessment), and makes no claim about dropout.
 - **`G3 = 0`.** Valid under the documentation, but possibly a student who did not sit
-  the final evaluation. Rows are kept (Phase 3 decision; they count as at risk). A
-  sensitivity check that excludes them is planned for Phase 5.
+  the final evaluation. Rows are kept (Phase 3 decision; they count as at risk).
+  Phase 4 sensitivity analyses and the Phase 5 zero-grade sensitivity check (selected
+  regression models refitted without them) are reported in
+  `docs/STATISTICAL_FINDINGS.md` and `docs/ML_RESULTS.md`. They never remove rows
+  from the primary results.
 - **`failures` coding.** UCI documents "n if 1 ≤ n < 3, else 4", but the files contain
   0–3 and never 4. The value 3 is read as "3 or more".
 - **Scope.** Two schools, one region, one school year (2005–2006, per the source

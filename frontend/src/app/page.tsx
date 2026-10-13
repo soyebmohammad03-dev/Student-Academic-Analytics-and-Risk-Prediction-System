@@ -92,6 +92,8 @@ export default function DashboardPage() {
                 trailing={
                   m.status === "available" ? (
                     <StatusBadge tone="positive">Available</StatusBadge>
+                  ) : m.status === "in_progress" ? (
+                    <StatusBadge tone="accent">In progress</StatusBadge>
                   ) : (
                     <PhaseBadge phase={m.phase} />
                   )

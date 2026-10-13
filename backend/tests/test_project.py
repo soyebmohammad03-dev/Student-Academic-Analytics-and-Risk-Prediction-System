@@ -26,3 +26,5 @@ def test_only_delivered_modules_claim_to_be_available(client):
 
     available = {m["key"] for m in modules if m["status"] == "available"}
     assert available == {"data", "statistics", "eda"}
+    # Phase 5 delivers model results through the API; the page follows in Phase 8.
+    assert {m["key"] for m in modules if m["status"] == "in_progress"} == {"models"}

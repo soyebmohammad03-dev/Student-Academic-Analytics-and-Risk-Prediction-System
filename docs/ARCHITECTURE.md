@@ -44,7 +44,7 @@
 | `analytics/data/`       | Dataset acquisition, loading, validation, dictionary, cohort overlap |
 | `analytics/preprocessing/` | Targets, feature scenarios, leakage guards, sklearn preprocessor, split, report (Phase 3) |
 | `analytics/statistics/` | Descriptive stats, distributions, correlations, group comparisons, chi-square, outliers, research questions, EDA chart data, findings generator (Phase 4) |
-| `analytics/` (other)    | Modelling (Phase 5) |
+| `analytics/ml/`         | Model registry, nested CV and tuning, metrics, selection, error analysis, comparisons, persistence, prediction service, results report (Phase 5) |
 
 ## Data layer (Phase 2)
 
@@ -101,7 +101,8 @@ build_report(dataset, scenario) ─▶ PreprocessingReport (fits the preprocesso
 ```
 
 Phase 5 composes `Pipeline([("prep", build_preprocessor(s)), ("model", estimator)])`
-and fits it on `split.X_train`. Training stays offline; the API only reads metadata.
+and fits it on `split.X_train` (see below). Training stays offline; the API only reads
+results and persisted pipelines.
 
 `app/services/preprocessing.py` builds each report once per cohort version, reusing
 the `DatasetStore` cache, and exposes it through a single metadata endpoint. The
@@ -145,6 +146,42 @@ Scatter, Heatmap). Each has a hover tooltip and a "Show data" table. The chart c
 tokens in `globals.css` were validated for colour-vision deficiency in light and dark
 mode.
 
+## Machine-learning layer (Phase 5)
+
+```
+AnalyticalDataset ── split(scenario) ──▶ X_train / X_test (Phase 3 split, seed 42)
+        │
+registry.py   ModelSpec: estimator factory, grid, complexity, class_weight
+        └─ build_pipeline(spec, scenario) = Pipeline[prep (ScenarioGuard + encoders), model]
+evaluation.py
+        ├─ nested_cv: outer K/StratifiedKFold(5) × GridSearchCV(inner 5) on X_train only
+        ├─ final fit: GridSearchCV on all of X_train → best pipeline
+        └─ one-off test scoring (metrics.py: ROC-AUC from scores, None when undefined)
+training.py   train_cohort: 3 scenarios × 2 tasks × all models
+        ├─ selection.py   CV-only rule: primary metric, one-SE, simplest
+        ├─ errors.py      residual / confusion analysis of selected models
+        └─ diagnostics    near-perfect, single-class, CV–test gap, below baseline
+comparison.py regression / classification tables, scenario and cohort comparisons
+persistence.py models/ml_results.json + models/selected/<cohort>__<task>__<scenario>.{joblib,json}
+predict.py    record validation (dictionary + leakage) → persisted pipeline → PredictionResult
+report.py     docs/ML_RESULTS.md (written by train.py; a test checks it is current)
+```
+
+- **Offline training.** `python -m analytics.ml.train` checks the dataset checksums,
+  trains, selects, saves and writes the report (a few minutes). The API never trains.
+- **Artefacts.** Only the 12 selected pipelines are persisted (one per cohort, task
+  and scenario), each with JSON metadata. `models/` is git-ignored, like `data/raw/`.
+- **Loading safety.** `joblib` files are pickles. They are loaded only from the
+  configured models directory. Loading checks each file's SHA-256 against its
+  metadata and refuses one built with another scikit-learn version.
+- **Serving.** `app/services/models.py` caches `ml_results.json` until the file
+  changes. `PredictionService` caches each loaded pipeline by artefact checksum.
+- **Result types.** These are Pydantic models in `analytics/ml/results.py` and
+  `comparison.py`, reused as API response models, as in the statistics layer.
+
+**Frontend.** The model-comparison page is marked *in progress*. Phase 5 delivers results
+through the API and `docs/ML_RESULTS.md`; the page is built in Phase 8.
+
 ## API (current)
 
 All paths are under `/api/v1`. `cohort` is required where listed and must be `math`
@@ -168,6 +205,14 @@ or `portuguese`.
 | GET    | `/statistics/outliers` | `cohort` | Tukey fences and z-scores per variable; flagged values |
 | GET    | `/eda/charts` | `cohort` | Histograms, bars, box plots, aggregated scatters, heatmap, risk profile, cross-tab |
 | GET    | `/preprocessing/summary` | `cohort`, `scenario` (`full_history` \| `mid_year` \| `early`, default `early`) | Shapes, feature groups, encoded features (fitted on train), engineered features, excluded columns and why, missing-value handling, target and risk distributions, outliers, split |
+| GET    | `/models` | — | Model definitions and search spaces; run configuration and the selected model per cohort/task/scenario once trained |
+| GET    | `/models/regression` | `cohort` | G3 regression table: CV MAE/RMSE/R² (mean ± SD) and test MAE/RMSE/R² for every scenario and model, with selections |
+| GET    | `/models/classification` | `cohort` | Academic-risk table: CV F1/ROC-AUC/recall/precision and test accuracy, precision, recall, specificity, F1, ROC-AUC, balanced accuracy |
+| GET    | `/models/evaluations` | `cohort`, `task`, `scenario` | Full records: per-fold scores, parameters chosen per fold, test confusion matrix, diagnostics |
+| GET    | `/models/scenario-comparison` | `cohort`, `task` | Selected model per scenario (early → mid-year → full history) against the baseline |
+| GET    | `/models/cohort-comparison` | — | Sample sizes, G3 and risk distributions, selected models for both cohorts |
+| GET    | `/models/selected` | `cohort`, `task`, `scenario` | Persisted model metadata, selection rationale, test-set error analysis |
+| POST   | `/models/predict` | body: `cohort`, `task`, `scenario`, optional `model`, `features` | Prediction from a validated feature record, with caveats |
 
 Errors use one shape, `{"code": "...", "detail": "..."}`:
 
@@ -175,3 +220,6 @@ Errors use one shape, `{"code": "...", "detail": "..."}`:
 | ------ | ------ | ---- |
 | 422 | `invalid_request` | Unknown cohort, scenario or comparison variable, missing cohort, page or page size out of range, search too long |
 | 503 | `dataset_unavailable` | Dataset files not downloaded; `detail` gives the command |
+| 422 | `invalid_record` | Prediction record with an outcome column, a grade the scenario does not allow, a missing or unknown attribute, or an undocumented value |
+| 404 | `model_not_available` | Prediction requested from a model that was evaluated but not selected (only selected models are persisted) |
+| 503 | `models_unavailable` | No training run in `models/`, or an artefact failed its checksum/version check; `detail` gives the command |

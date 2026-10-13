@@ -11,11 +11,12 @@ import type { AppModule } from "@/lib/modules";
  */
 export function ModulePlaceholder({ module: appModule }: { module: AppModule }) {
   const Icon = appModule.icon;
+  const inProgress = appModule.status === "in_progress";
 
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow={`Planned · Phase ${appModule.phase}`}
+        eyebrow={`${inProgress ? "In progress" : "Planned"} · Phase ${appModule.phase}`}
         title={appModule.title}
         description={appModule.summary}
       />
@@ -25,11 +26,15 @@ export function ModulePlaceholder({ module: appModule }: { module: AppModule }) 
           <Icon className="size-6" strokeWidth={1.75} />
         </span>
         <h2 className="mt-5 font-display text-[17px] font-semibold tracking-[-0.01em] text-text">
-          This module is not available yet
+          {inProgress
+            ? "Results are computed; this page is not built yet"
+            : "This module is not available yet"}
         </h2>
         <p className="mt-1.5 max-w-md text-[14px] leading-[21px] text-text-secondary">
-          It will be populated with results computed from the real dataset in Phase{" "}
-          {appModule.phase}. No sample or placeholder figures are shown in the meantime.
+          {inProgress
+            ? (appModule.progressNote ??
+              "Results from the real dataset are available through the API. No sample figures are shown here.")
+            : `It will be populated with results computed from the real dataset in Phase ${appModule.phase}. No sample or placeholder figures are shown in the meantime.`}
         </p>
         <div className="mt-5">
           <PhaseBadge phase={appModule.phase} />

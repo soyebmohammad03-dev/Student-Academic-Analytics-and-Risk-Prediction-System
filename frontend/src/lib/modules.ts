@@ -23,6 +23,8 @@ export interface AppModule {
   summary: string;
   /** Scope of the module, mirrored from PROJECT_ROADMAP.md. */
   scope: string[];
+  /** What already exists while the module is in progress. */
+  progressNote?: string;
 }
 
 export const analysisModules: AppModule[] = [
@@ -97,13 +99,16 @@ export const modellingModules: AppModule[] = [
     href: "/model-comparison",
     icon: GitCompareArrows,
     phase: 5,
-    status: "planned",
+    status: "in_progress",
     summary: "Cross-validated comparison of candidate models against simple baselines.",
+    progressNote:
+      "Models are trained and evaluated on the real dataset (Phase 5). Results are served by the API at /api/v1/models and summarised in docs/ML_RESULTS.md; this page is built in Phase 8.",
     scope: [
       "Baselines: mean predictor and majority class",
       "Regression: MAE, MSE, RMSE, R²",
       "Classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix",
-      "Stratified cross-validation and justified hyperparameter tuning",
+      "Nested, stratified cross-validation and bounded grid-search tuning",
+      "Early, mid-year and full-history scenarios compared for both cohorts",
     ],
   },
   {

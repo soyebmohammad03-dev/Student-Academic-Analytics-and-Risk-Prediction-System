@@ -392,11 +392,242 @@ depends on colour alone.
 - **Statistics are not prediction.** Phase 5 models are evaluated separately, on
   held-out data.
 
-## 6. Evaluation (Phase 5)
+## 6. Machine learning and evaluation (Phase 5)
 
-- Regression: MAE, MSE, RMSE, R².
-- Classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix. Because
-  `at_risk` is imbalanced (especially in Portuguese, 15.4%), recall/F1 for the at-risk class and ROC-AUC
-  are prioritised over accuracy, and a majority-class baseline is always reported.
-- Stratified k-fold cross-validation on the training split, with fixed random seeds.
-  The held-out test split from §4.8 is used only once, for final reporting.
+Code: `backend/analytics/ml/`. Results: [`ML_RESULTS.md`](ML_RESULTS.md), generated from
+the training run. Every number there comes from code; none is typed by hand.
+
+### 6.1 Tasks and targets
+
+| Task | Target | Models |
+| --- | --- | --- |
+| Regression | `G3`, the final grade (0–20) | mean baseline, linear regression, decision tree, random forest |
+| Classification | `at_risk` = 1 when G3 < 10 | majority-class baseline, logistic regression, decision tree, k-nearest neighbours, SVM (RBF kernel), random forest |
+
+`at_risk` is **academic risk**: the risk of a final grade below the pass mark. It is
+not dropout. The dataset contains no dropout outcome, and no model here predicts one.
+
+Cohorts are modelled separately. Mathematics and Portuguese are different subjects
+with different grade and risk distributions (32.9% versus 15.4% at risk). There is no
+student identifier to merge them safely (§2).
+
+### 6.2 Scenarios
+
+Every model is trained and evaluated under each scenario of §4.3. Each scenario sees
+only its own columns, and `ScenarioGuard` rejects any other input:
+
+| Scenario | Inputs | When it would be available |
+| --- | --- | --- |
+| `early` | non-grade attributes only | before any grade of the year |
+| `mid_year` | + G1 | after the first grading period |
+| `full_history` | + G1 + G2 | after the second grading period |
+
+The comparison measures **information availability**. Phase 4 found that G1 and G2
+correlate with G3 at ρ ≈ 0.88–0.96. A full-history model therefore mostly repeats
+interim grades, and its higher scores do not make it a "smarter" model. The early
+scenario is the realistic figure for early support. It still predicts academic risk,
+not dropout.
+
+### 6.3 Data splitting and cross-validation
+
+1. **Test split.** The training set (80%) and the held-out test set (20%) are the
+   Phase 3 split: stratified on `at_risk` with seed 42 (§4.8). Both tasks use the same
+   students. The test set is scored once per model, after training is complete.
+2. **Nested cross-validation on the training set.**
+   - **Outer loop:** 5 folds. Regression uses `KFold`; classification uses
+     `StratifiedKFold` on `at_risk`. Both are shuffled with seed 42.
+   - **Inner loop:** in each outer training portion, `GridSearchCV` (5 inner folds, same
+     splitter type) chooses hyperparameters.
+   - **Scoring:** the tuned pipeline is scored on the outer validation fold.
+
+   The reported CV mean ± SD therefore estimates the whole procedure, tuning included,
+   without the optimism of reporting the best grid score.
+3. **Final model.** `GridSearchCV` is run once more on the full training set, and the
+   best configuration is refitted on all training students.
+
+**Why 5 folds.** Each validation fold stays usable: about 63 students (≈ 21 at risk)
+in Mathematics and about 104 (≈ 16 at risk) in Portuguese. With 10 folds, per-fold F1
+and ROC-AUC for the minority class would rest on about 8–10 at-risk students.
+
+**No preprocessing outside the pipeline.** Imputers, one-hot encoders and scalers are
+the first step of every model `Pipeline`. They are fitted inside each outer fold, each
+inner fold and the final fit, on exactly the rows being fitted. Engineered features
+are stateless row-wise functions (§4.6). Tests check that a fold's fitted scaler means
+equal that fold's training rows, and that altering the test set changes neither CV
+scores nor chosen hyperparameters.
+
+### 6.4 Hyperparameter search
+
+Search is bounded and uses grids only (`analytics/ml/registry.py`). Linear regression
+is fitted without tuning.
+
+| Model | Grid |
+| --- | --- |
+| Decision tree (both tasks) | `max_depth` {3, 5, 8, None} × `min_samples_split` {2, 10, 20} × `min_samples_leaf` {1, 5, 10} (36) |
+| Random forest (both tasks) | `n_estimators` {100, 300} × `max_depth` {None, 8} × `min_samples_split` {2, 10} × `min_samples_leaf` {1, 4} × `max_features` {1.0 or "sqrt", 0.33} (32) |
+| Logistic regression | `C` {0.01, 0.1, 1, 10} (4) |
+| k-nearest neighbours | `n_neighbors` {5, 11, 21, 31} × `weights` {uniform, distance} (8) |
+| SVM (RBF) | `C` {0.1, 1, 10} × `gamma` {scale, 0.01} (6) |
+
+Tuning metrics:
+- **Regression:** RMSE.
+- **Classification:** F1 for the at-risk class.
+
+The test set is never involved.
+
+### 6.5 Class imbalance
+
+Risk counts and percentages are reported per cohort for all students, the training
+set and the test set (`ML_RESULTS.md`):
+- **Imbalance handling:** every classifier that supports it uses
+  `class_weight="balanced"`.
+- **k-NN:** it has no class weights. Its lower recall is reported as measured, not
+  hidden.
+- **No resampling:** there is no oversampling or SMOTE. Class weights are simpler for
+  datasets of this size and avoid synthetic students. If resampling were ever
+  added, it would belong inside the pipeline after the split.
+
+### 6.6 Metrics
+
+Regression metrics:
+- **MAE:** mean absolute error, in grade points.
+- **MSE:** mean squared error.
+- **RMSE:** root mean squared error, in grade points.
+- **R²:** proportion of variance explained.
+
+Classification uses at risk as the positive class:
+
+| Metric | Meaning here |
+| --- | --- |
+| Recall (sensitivity) | share of at-risk students who are flagged |
+| Precision | share of flagged students who are actually at risk |
+| Specificity | share of passing students not flagged |
+| F1 | harmonic mean of precision and recall |
+| Balanced accuracy | mean of recall and specificity |
+| ROC-AUC | ranking quality of the continuous score, over all thresholds |
+| Accuracy | reported, but never on its own (see baselines) |
+
+ROC-AUC uses `predict_proba` where available and the SVM's `decision_function`
+otherwise. It is **never computed from hard labels**.
+
+Undefined values are `None`, never NaN:
+- **ROC-AUC:** undefined when evaluated students are all one class.
+- **Precision:** undefined when no student is flagged.
+
+Class labels use each estimator's own decision rule: the more probable class, or the
+sign of the SVM decision score. The threshold is not tuned.
+
+**The recall–precision trade-off.** Missing an at-risk student (a false negative)
+can mean no support is offered. Flagging a student who would pass (a false positive)
+costs a follow-up conversation. Recall is therefore watched closely. It is not
+maximised on its own, though: a model that flags everyone has recall 1 and is useless.
+F1 balances the two, and ROC-AUC shows ranking quality independent of the threshold.
+The right operating point depends on the cost of an intervention, which these data do
+not provide.
+
+### 6.7 Baselines
+
+- **Regression:** a model that predicts the training mean for every student
+  (`DummyRegressor`). Its cross-validated R² is about 0.
+- **Classification:** a model that predicts the majority class, "not at risk", for
+  every student (`DummyClassifier`):
+  - accuracy 67% (Mathematics) or 85% (Portuguese);
+  - recall 0, ROC-AUC 0.5, precision undefined.
+
+  This is why accuracy is never reported without the baseline.
+
+### 6.8 Model selection
+
+Selection uses cross-validation only (`analytics/ml/selection.py`):
+
+1. **Primary metric:** the mean over outer folds of RMSE (regression) or at-risk F1
+   (classification).
+2. **Best model:** the best candidate, with baselines excluded.
+3. **One-standard-error rule:** any candidate within one SE (fold SD / √5) of the best
+   is treated as performing equivalently.
+4. **Choice:** the simplest of these, by complexity rank: linear < tree < k-NN < SVM <
+   forest. Simpler models are easier to explain and audit.
+5. **Baseline check:** the result records whether the choice beats the baseline.
+
+Test scores are reported for every model but never change the choice. A model is not
+chosen because it is popular, or because of a single test number.
+
+### 6.9 Error analysis and diagnostics
+
+Error analysis covers the selected models on the test set:
+
+- **Regression:**
+  - residual (actual − predicted) distribution;
+  - MAE and mean residual by G3 band, with G3 = 0 isolated;
+  - the 10 largest errors, by file row position only.
+- **Classification:**
+  - the confusion matrix and per-class results;
+  - actual grades of false negatives and false positives;
+  - how many G3 = 0 students were flagged.
+
+Pattern notes are generated from the numbers, using thresholds fixed in
+`analytics/ml/errors.py`.
+
+**Zero-grade sensitivity (exploratory).** Each selected regression model is refitted
+without G3 = 0 training students. It is compared with the selected model on the same
+test students with G3 > 0. Zero grades stay in every primary result.
+
+**Automated diagnostics.** These flag results for the quality review and never alter
+them:
+- R² or ROC-AUC ≥ 0.99 (possible leakage);
+- a classifier predicting a single class;
+- a test score more than 2 fold SDs from its CV mean;
+- a model that does not beat its baseline.
+
+### 6.10 Persistence and reproducibility
+
+`python -m analytics.ml.train` reproduces everything. It verifies the dataset
+checksums, then trains both cohorts. It writes:
+- `models/ml_results.json`, with every model's folds, parameters and test scores;
+- one fitted pipeline plus a JSON metadata file for each of the **12 selected models**;
+- `docs/ML_RESULTS.md`.
+
+Metadata includes:
+- the cohort, task, scenario and model;
+- the input and encoded feature names and the target;
+- the threshold and score type;
+- hyperparameters and the search space;
+- the seed, CV strategy, sample sizes, and CV and test metrics;
+- software versions, the dataset SHA-256, the artefact SHA-256 and a timestamp.
+
+Pipelines are stored with `joblib`. Loading checks the SHA-256 and refuses an artefact
+built with a different scikit-learn version. Model artefacts are git-ignored like the
+data; the committed report records what they contained.
+
+### 6.11 Prediction service
+
+`analytics/ml/predict.py` accepts one feature record using the UCI attribute codes and
+validates it against the data dictionary:
+- G3 and `at_risk` are rejected as leakage;
+- G1/G2 are rejected outside the scenarios that allow them.
+
+It derives the engineered features and applies the persisted pipeline for the chosen
+cohort, task and scenario. It returns either:
+- a predicted grade, limited to 0–20; or
+- an at-risk label with its score and score type.
+
+Every result carries caveats. The API exposes this at `POST /api/v1/models/predict`;
+the end-user form belongs to a later phase.
+
+### 6.12 Limitations
+
+- **One test set per cohort:** 79 and 130 students. Test scores are single, noisy
+  estimates; nested-CV means and SDs are the stable summary.
+- **Observational data:** two schools, one year. Models learn associations, not causes,
+  and may not transfer to other schools, years or curricula.
+- **Interim grades:** G1 and G2 dominate the mid-year and full-history scenarios.
+  Those scenarios are not early warnings.
+- **Absence timing:** the period that absences cover is undocumented (§4.6), so even
+  the early scenario may contain information recorded during the year.
+- **Zero grades:** G3 = 0 probably sometimes means the final evaluation was not taken.
+  These students are hard to predict, and they inflate regression error.
+- **Untuned threshold:** different recall/precision trade-offs need a threshold chosen
+  with the costs of intervention in mind.
+- **Linear-regression coefficients:** nominal attributes are fully one-hot encoded, so
+  coefficients are not uniquely identified (the minimum-norm solution is used).
+  Predictions are unaffected. Interpretation is Phase 6 work.
