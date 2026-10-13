@@ -13,6 +13,7 @@ From `backend/`, with the virtual environment active and the dataset downloaded:
 python -m analytics.ml.train                 # full documented search, both cohorts (several minutes)
 python -m analytics.ml.train --report-only   # rewrite docs/ML_RESULTS.md from saved results
 python -m analytics.ml.train --search minimal --models-dir /tmp/models  # quick smoke run
+python -m analytics.interpret.build          # importance + docs/INTERPRETABILITY.md (~1 minute)
 ```
 
 The script verifies the dataset checksums first. With the same data and library
@@ -23,6 +24,8 @@ splitter and every estimator.
 
 ```
 models/
+├── interpretability.json  global importance and calibration of the selected models
+│                          (python -m analytics.interpret.build; no retraining)
 ├── ml_results.json        every model's nested-CV folds, chosen parameters, test
 │                          scores, selections, error analysis and run metadata
 └── selected/

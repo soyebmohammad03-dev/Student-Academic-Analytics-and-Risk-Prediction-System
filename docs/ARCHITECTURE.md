@@ -44,6 +44,8 @@
 | `analytics/data/`       | Dataset acquisition, loading, validation, dictionary, cohort overlap |
 | `analytics/preprocessing/` | Targets, feature scenarios, leakage guards, sklearn preprocessor, split, report (Phase 3) |
 | `analytics/statistics/` | Descriptive stats, distributions, correlations, group comparisons, chi-square, outliers, research questions, EDA chart data, findings generator (Phase 4) |
+| `analytics/interpret/`  | Attribute mapping, permutation-sampling Shapley values, global importance, calibration, individual explanations, sensitivity experiments, interpretability report (Phase 6) |
+| `analytics/risk/`       | Group-level academic-risk profiles and evidence-checked suggestions (Phase 6) |
 | `analytics/ml/`         | Model registry, nested CV and tuning, metrics, selection, error analysis, comparisons, persistence, prediction service, results report (Phase 5) |
 
 ## Data layer (Phase 2)
@@ -182,6 +184,43 @@ report.py     docs/ML_RESULTS.md (written by train.py; a test checks it is curre
 **Frontend.** The model-comparison page is marked *in progress*. Phase 5 delivers results
 through the API and `docs/ML_RESULTS.md`; the page is built in Phase 8.
 
+## Interpretability and risk layer (Phase 6)
+
+```
+persisted pipelines (models/selected) ─┐        cohort data (DatasetStore → AnalyticalDataset)
+                                       ▼                         │ training split = background
+attributes.py   encoded/engineered columns ↔ original attributes │
+shapley.py      permutation-sampling interventional Shapley (attribute players, batched)
+importance.py   permutation (test) · mean |Shapley| · impurity · coefficients · calibration
+explain.py      Interpreter: explain(record) · sensitivity(attribute) · scenario_sensitivity
+build.py        CLI → models/interpretability.json + docs/INTERPRETABILITY.md (no retraining)
+risk/profiles.py     observed risk by pre-defined school-related groups (reuses Phase 4 tests)
+risk/suggestions.py  rules → Fisher evidence check → suggestions / not_shown + disclaimer
+```
+
+- **Offline vs on demand.** Global importance (about 45 s for 12 models) is computed
+  offline. The API serves it from `interpretability.json`, which is cached until the
+  file changes. Explanations, sensitivity, profiles and suggestions are computed per
+  request. Each explanation is one batched Shapley estimate of about 35k rows, under a
+  second for the forests.
+- **Service.** `app/services/interpretability.py` (`RiskService`) combines the
+  `DatasetStore`, used for background data and profiles, with the `ModelStore`, used
+  for the persisted pipelines. It caches the analytical dataset and profiles per
+  cohort version.
+- **Separation of statements.** Response types carry a `kind`:
+  `individual_model_explanation`, `model_sensitivity`, `group_statistics` or
+  `general_educational_suggestion`. `/risk/insights` returns the three kinds in
+  separate fields.
+- **No new dependency.** SHAP is not used (see METHODOLOGY §7.2).
+
+**Frontend.** The Risk Analysis page (`/risk-analysis`) consumes `/risk/profiles`
+and `/interpretability/importance`:
+- profiles show bars with 95% intervals and the cohort rate;
+- importance shows one card per method, each on its own scale, with its limitations.
+
+The Prediction page is marked *in progress*. Its services exist in the API, and the
+input form is Phase 8 work.
+
 ## API (current)
 
 All paths are under `/api/v1`. `cohort` is required where listed and must be `math`
@@ -213,6 +252,13 @@ or `portuguese`.
 | GET    | `/models/cohort-comparison` | — | Sample sizes, G3 and risk distributions, selected models for both cohorts |
 | GET    | `/models/selected` | `cohort`, `task`, `scenario` | Persisted model metadata, selection rationale, test-set error analysis |
 | POST   | `/models/predict` | body: `cohort`, `task`, `scenario`, optional `model`, `features` | Prediction from a validated feature record, with caveats |
+| GET    | `/interpretability/importance` | `cohort`, `task`, `scenario` | Global importance of the selected model, one entry per method (unit, data, limitations), plus probability calibration |
+| POST   | `/interpretability/explain` | body: `cohort`, `task`, `scenario`, optional `model`, `features`, `top` (1–33) | Prediction plus Shapley contributions (with SE), base value, score percentile, limitations |
+| POST   | `/interpretability/sensitivity` | body: as above plus `attribute` (10 school-related attributes) | Model output as one attribute varies, with training support per value |
+| POST   | `/interpretability/scenario-sensitivity` | body: `cohort`, `task`, `features` (G1/G2 optional) | The record predicted under each scenario its grades allow |
+| GET    | `/risk/profiles` | `cohort` | Observed at-risk proportions with Wilson CIs for 8 attributes and 3 two-way tables |
+| POST   | `/risk/suggestions` | body: `cohort`, `scenario`, `features` | Evidence-checked suggestions, suggestions not shown and why, disclaimer |
+| POST   | `/risk/insights` | body: `cohort`, `scenario`, `features` | A. individual explanation · B. group findings · C. suggestions, kept separate |
 
 Errors use one shape, `{"code": "...", "detail": "..."}`:
 
@@ -220,6 +266,6 @@ Errors use one shape, `{"code": "...", "detail": "..."}`:
 | ------ | ------ | ---- |
 | 422 | `invalid_request` | Unknown cohort, scenario or comparison variable, missing cohort, page or page size out of range, search too long |
 | 503 | `dataset_unavailable` | Dataset files not downloaded; `detail` gives the command |
-| 422 | `invalid_record` | Prediction record with an outcome column, a grade the scenario does not allow, a missing or unknown attribute, or an undocumented value |
+| 422 | `invalid_record` | Prediction, explanation, sensitivity or risk record with an outcome column, a grade the scenario does not allow, a missing or unknown attribute, or an undocumented value |
 | 404 | `model_not_available` | Prediction requested from a model that was evaluated but not selected (only selected models are persisted) |
-| 503 | `models_unavailable` | No training run in `models/`, or an artefact failed its checksum/version check; `detail` gives the command |
+| 503 | `models_unavailable` | No training run or interpretability results in `models/`, or an artefact failed its checksum/version check; `detail` gives the command |

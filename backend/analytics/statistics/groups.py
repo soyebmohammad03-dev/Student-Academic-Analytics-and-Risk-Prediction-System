@@ -91,7 +91,8 @@ GROUPINGS: dict[str, Grouping] = {
 
 _ASSIGNERS = {
     "studytime": _coded("studytime"),
-    "failures": _coded("failures"),
+    # UCI codes "3 or more" as 4 (the official files only contain 0–3).
+    "failures": lambda d: d["failures"].astype("int64").clip(upper=3),
     "has_past_failures": _coded("has_past_failures"),
     "absence_band": _absence_band,
     "Medu": _education("Medu"),

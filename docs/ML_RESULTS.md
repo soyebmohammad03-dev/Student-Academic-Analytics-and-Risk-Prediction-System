@@ -371,6 +371,10 @@ Selected models that differ between cohorts:
 - regression, early: Mathematics: Random forest; Portuguese language: Linear regression.
 - classification, early: Mathematics: Support vector machine (RBF); Portuguese language: Logistic regression.
 
+## Interpretability (Phase 6)
+
+Global feature importance for each selected model (permutation importance on the test set, mean absolute Shapley values, impurity importance or coefficients), probability calibration of the selected classifiers, and group-level academic-risk profiles are generated separately from the persisted models in [INTERPRETABILITY.md](INTERPRETABILITY.md) by `python -m analytics.interpret.build`. No model was retrained for them.
+
 ## Limitations
 
 - One held-out test set per cohort (79 and 130 students). Test scores are single estimates with wide uncertainty; the nested-CV means and SDs are the more stable summary.

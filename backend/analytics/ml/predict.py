@@ -78,8 +78,8 @@ def _check_value(name: str, value: Any) -> str | float:
     return float(number)
 
 
-def record_frame(record: Mapping[str, Any], scenario: Scenario) -> pd.DataFrame:
-    """Validate one record and return the scenario's model input (one row)."""
+def validated_record(record: Mapping[str, Any], scenario: Scenario) -> pd.DataFrame:
+    """Validate one record and return its raw attributes as a typed one-row frame."""
     scenario = Scenario(scenario)
     keys = set(record)
     if leaked := keys & TARGET_COLUMNS:
@@ -98,7 +98,13 @@ def record_frame(record: Mapping[str, Any], scenario: Scenario) -> pd.DataFrame:
         {name: pd.Series([value], dtype=object if isinstance(value, str) else "float64")
          for name, value in values.items()}
     )  # fmt: skip
-    return add_engineered_features(row)[list(feature_columns(scenario))]
+    return row
+
+
+def record_frame(record: Mapping[str, Any], scenario: Scenario) -> pd.DataFrame:
+    """Validate one record and return the scenario's model input (one row)."""
+    row = validated_record(record, scenario)
+    return add_engineered_features(row)[list(feature_columns(Scenario(scenario)))]
 
 
 class PredictionResult(BaseModel):
@@ -117,6 +123,13 @@ class PredictionResult(BaseModel):
         default=None, description=f"Classification: predicted G3 below {RISK_THRESHOLD}."
     )
     score: float | None = Field(default=None, description="Classification: continuous score.")
+    probability: float | None = Field(
+        default=None,
+        description=(
+            "Classification: model probability of academic risk, only for models that "
+            "output probabilities. Class-weighted training; not a calibrated chance."
+        ),
+    )
     score_kind: Literal["probability", "decision_function"] | None = None
     threshold: float | None = None
     model_test_metrics: Metrics
@@ -197,4 +210,16 @@ class PredictionService:
             result.score = float(positive_scores(pipeline, X)[0])
             result.score_kind = meta.score_kind
             result.threshold = meta.threshold
+            if meta.score_kind == "probability":
+                result.probability = result.score
+                result.caveats.append(
+                    "The probability comes from a model trained with balanced class weights. "
+                    "It orders students by estimated risk but is not a calibrated chance of "
+                    "falling below the pass mark."
+                )
+            else:
+                result.caveats.append(
+                    "This model outputs a decision score, not a probability; no probability "
+                    "is reported."
+                )
         return result

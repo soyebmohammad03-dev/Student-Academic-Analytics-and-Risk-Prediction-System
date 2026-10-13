@@ -301,6 +301,15 @@ def render(results: MlResults) -> str:
         "",
         *([f"- {d}" for d in comparison.differences] or ["- None."]),
         "",
+        "## Interpretability (Phase 6)",
+        "",
+        "Global feature importance for each selected model (permutation importance on the "
+        "test set, mean absolute Shapley values, impurity importance or coefficients), "
+        "probability calibration of the selected classifiers, and group-level academic-risk "
+        "profiles are generated separately from the persisted models in "
+        "[INTERPRETABILITY.md](INTERPRETABILITY.md) by `python -m analytics.interpret.build`. "
+        "No model was retrained for them.",
+        "",
         "## Limitations",
         "",
         "- One held-out test set per cohort (79 and 130 students). Test scores are single "

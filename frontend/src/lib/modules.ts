@@ -84,8 +84,10 @@ export const modellingModules: AppModule[] = [
     href: "/prediction",
     icon: Crosshair,
     phase: 6,
-    status: "planned",
+    status: "in_progress",
     summary: "Predict final grade and academic risk under clearly stated input scenarios.",
+    progressNote:
+      "The prediction and explanation services are available through the API (POST /api/v1/models/predict, /api/v1/interpretability/explain and /api/v1/risk/insights). The input form is built in Phase 8.",
     scope: [
       "Validated input form for a single student profile",
       "Grade (regression) and academic-risk (classification) outputs",
@@ -117,12 +119,13 @@ export const modellingModules: AppModule[] = [
     href: "/risk-analysis",
     icon: ShieldAlert,
     phase: 6,
-    status: "planned",
+    status: "available",
     summary: "Interpretable insight into which factors are associated with academic risk.",
     scope: [
-      "Permutation importance and partial dependence",
-      "Risk-factor summaries by student group",
-      "Communication of uncertainty and model limitations",
+      "Observed academic risk by past failures, study time, absences and support, with 95% intervals",
+      "Global importance of the selected models: permutation, Shapley, impurity and coefficients",
+      "Probability calibration of the selected classifiers",
+      "Individual explanations, sensitivity experiments and suggestions via the API",
     ],
   },
 ];

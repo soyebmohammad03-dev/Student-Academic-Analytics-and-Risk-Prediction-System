@@ -5,14 +5,14 @@ of student data, through **exploratory analytics** and **reproducible preprocess
 to a **comparison of machine-learning models** that predict academic performance and
 identify **academic risk** — presented through a modern, interpretable web application.
 
-> **Status: Phase 5 of 9 complete — machine learning and model evaluation.**
-> The official UCI dataset is validated and preprocessed without leakage. Statistical
-> tests and EDA are shown in the Statistical Analysis and EDA pages. Regression (G3) and
-> academic-risk classification models have been trained, tuned with nested
-> cross-validation and evaluated for both cohorts and three information scenarios. Their
-> results are served by the API and reported in
-> [docs/ML_RESULTS.md](docs/ML_RESULTS.md). The model-comparison and prediction pages
-> follow in later phases. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
+> **Status: Phase 6 of 9 complete — interpretability and academic-risk analysis.**
+> The official UCI dataset is validated and preprocessed without leakage. Statistics,
+> EDA and model results are computed from the real data. The selected models are
+> explained with attribute-level Shapley values and several global-importance methods.
+> Observed group-level risk profiles are shown on the Risk Analysis page. Predictions,
+> explanations, sensitivity experiments and cautious suggestions are available through
+> the API. The Model Comparison and Prediction pages follow in Phase 8. See
+> [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
 
 ISPA undergraduate AI / Data Analytics project.
 
@@ -90,7 +90,7 @@ academic-risk insights → Web application
 | Exploratory analysis (implemented) | Histograms, bar charts, box plots, scatter plots, correlation heatmap, academic-risk profile, cross-tab, outlier screening |
 | Preprocessing (implemented) | Targets, leakage-aware feature scenarios, one-hot/ordinal encoding with fixed categories, two justified engineered features, training-only imputation/scaling, stratified reproducible split |
 | Modelling (implemented) | Baselines plus 3 regression and 5 classification models per cohort and scenario; nested cross-validation with bounded grid search; CV-only selection rule; held-out test set scored once |
-| Interpretation | Model-agnostic feature importance and per-prediction explanations |
+| Interpretation (implemented) | Attribute-level Shapley explanations; permutation, Shapley, impurity and coefficient importance; probability calibration; model-sensitivity experiments; group risk profiles; evidence-checked suggestions |
 
 ### Target definition and leakage control
 
@@ -202,6 +202,45 @@ Methods: [docs/METHODOLOGY.md §6](docs/METHODOLOGY.md#6-machine-learning-and-ev
 Artefacts are regenerated with `python -m analytics.ml.train`
 (see [models/README.md](models/README.md)).
 
+### Interpretability and academic-risk analysis (Phase 6)
+
+`backend/analytics/interpret/` and `backend/analytics/risk/` explain the 12 selected
+models without retraining them. They keep four kinds of statement apart: model
+prediction, model explanation, group-level association, and (never) causal claims.
+
+- **Individual explanations.** Interventional Shapley values estimated by permutation
+  sampling over the original attributes. One-hot and engineered columns therefore
+  stay consistent, and one method covers forests, trees, linear models and the SVM.
+  Explanations are exactly additive, seeded and bounded. The `shap` package was not
+  added; [METHODOLOGY §7.2](docs/METHODOLOGY.md#72-shap-decision) explains why.
+- **Global importance:**
+  - permutation importance on the held-out test set, as an evaluation-time
+    diagnostic;
+  - mean absolute Shapley values;
+  - impurity importance for trees and forests;
+  - coefficients for linear models.
+
+  Each is reported on its own scale with its limitations.
+- **Probabilities.** These are reported only by models that output them. The selected
+  classifiers were trained with class weights, and their probabilities over-predict
+  the observed at-risk rate on the test set. They order students but are not
+  calibrated chances. No low/moderate/high categories are invented.
+- **Sensitivity experiments.** One school-related attribute is varied, with all other
+  inputs held fixed. The same record can also be compared across scenarios. These
+  show model behaviour, not interventions.
+- **Risk profiles.** Observed at-risk shares, with 95% intervals, by past failures,
+  study time, absences, support, paid classes, plans for higher education and
+  internet. Demographic groups are deliberately not profiled.
+- **Suggestions.** Non-punitive prompts for a teacher or adviser. Each is shown only
+  when the cohort's data show higher observed risk for the triggering group, and every
+  response carries a disclaimer.
+
+Findings from the real data are in
+[docs/INTERPRETABILITY.md](docs/INTERPRETABILITY.md), which is generated. For example,
+past failures and interim grades dominate the selected models. In Mathematics, much of
+the models' reliance on absences comes from the students with G3 = 0, all of whom have
+0 recorded absences.
+
 ## Technology stack
 
 | Layer       | Technology |
@@ -217,14 +256,14 @@ Artefacts are regenerated with `python -m analytics.ml.train`
 .
 ├── backend/
 │   ├── app/            # FastAPI: config, routes, schemas, services
-│   ├── analytics/      # data (Phase 2), preprocessing (Phase 3), statistics (Phase 4), ml (Phase 5)
+│   ├── analytics/      # data, preprocessing, statistics, ml, interpret + risk (Phases 2–6)
 │   └── tests/
 ├── frontend/           # Next.js application
 ├── data/               # raw/ and processed/ (git-ignored contents)
 ├── models/             # Trained artifacts (git-ignored; regenerated by analytics.ml.train)
 ├── notebooks/          # Exploration only
 ├── scripts/            # Developer helpers (check.sh)
-├── docs/               # ARCHITECTURE, METHODOLOGY, DATA_DICTIONARY, STATISTICAL_FINDINGS, ML_RESULTS
+├── docs/               # ARCHITECTURE, METHODOLOGY, DATA_DICTIONARY, STATISTICAL_FINDINGS, ML_RESULTS, INTERPRETABILITY
 └── PROJECT_ROADMAP.md
 ```
 
@@ -251,6 +290,7 @@ source .venv/bin/activate
 uv pip install -e ".[dev]"           # or: pip install -e ".[dev]"
 python -m analytics.data.download    # fetch + checksum-verify the UCI dataset (once)
 python -m analytics.ml.train         # train, evaluate and persist models (several minutes)
+python -m analytics.interpret.build  # global importance + docs/INTERPRETABILITY.md (~1 minute)
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -275,6 +315,11 @@ API: <http://localhost:8000/api/v1/health> · Docs: <http://localhost:8000/docs>
 | `GET /models/selected?cohort=math&task=regression&scenario=early` | Selected model metadata and error analysis |
 | `GET /models/evaluations?cohort=math&task=regression&scenario=early` | Per-fold results and diagnostics |
 | `POST /models/predict` | Prediction from a validated feature record |
+| `GET /interpretability/importance?cohort=math&task=classification&scenario=early` | Global importance of the selected model, per method |
+| `POST /interpretability/explain` | Prediction with attribute-level Shapley contributions |
+| `POST /interpretability/sensitivity` · `/interpretability/scenario-sensitivity` | Model-sensitivity experiments |
+| `GET /risk/profiles?cohort=math` | Observed academic risk by student group |
+| `POST /risk/suggestions` · `POST /risk/insights` | Evidence-checked suggestions; individual, group and suggestion layers kept separate |
 
 `cohort` is `math` or `portuguese`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for error codes and limits.
@@ -307,7 +352,7 @@ Runs Ruff, pytest, ESLint, TypeScript, Vitest and a production build.
 | 3 | Preprocessing & feature engineering | ✅ Complete |
 | 4 | Statistics & exploratory data analysis | ✅ Complete |
 | 5 | Machine learning & model evaluation | ✅ Complete |
-| 6 | Interpretability & academic risk analysis | Planned |
+| 6 | Interpretability & academic risk analysis | ✅ Complete |
 | 7 | End-to-end backend integration | Planned |
 | 8 | Complete Apple-style frontend | Planned |
 | 9 | Final validation, documentation & presentation readiness | Planned |

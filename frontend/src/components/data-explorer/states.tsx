@@ -6,6 +6,7 @@ import type { ApiError } from "@/lib/api";
 /** Full-width explanation for why data could not be shown, with the fix. */
 export function DataUnavailable({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
   const missingDataset = error.code === "dataset_unavailable";
+  const missingModels = error.code === "models_unavailable";
   const offline = error.status === undefined;
   const Icon = missingDataset ? DatabaseZap : CloudOff;
 
@@ -17,22 +18,28 @@ export function DataUnavailable({ error, onRetry }: { error: ApiError; onRetry: 
       <h2 className="mt-5 font-display text-[17px] font-semibold tracking-[-0.01em] text-text">
         {missingDataset
           ? "The dataset has not been downloaded"
-          : offline
-            ? "The analytics API is not reachable"
-            : "The data could not be loaded"}
+          : missingModels
+            ? "The models have not been trained"
+            : offline
+              ? "The analytics API is not reachable"
+              : "The data could not be loaded"}
       </h2>
       <p className="mt-1.5 max-w-md text-[14px] leading-[21px] text-text-secondary">
         {missingDataset
           ? "Download and verify the official UCI files, then try again:"
-          : offline
-            ? "Start the backend, then try again:"
-            : error.message}
+          : missingModels
+            ? "Train the models and build the interpretability results, then try again:"
+            : offline
+              ? "Start the backend, then try again:"
+              : error.message}
       </p>
-      {(missingDataset || offline) && (
+      {(missingDataset || missingModels || offline) && (
         <code className="mt-4 rounded-lg bg-fill px-3 py-2 font-mono text-[12px] text-text">
           {missingDataset
             ? "cd backend && python -m analytics.data.download"
-            : "cd backend && uvicorn app.main:app --port 8000"}
+            : missingModels
+              ? "cd backend && python -m analytics.ml.train && python -m analytics.interpret.build"
+              : "cd backend && uvicorn app.main:app --port 8000"}
         </code>
       )}
       <button
