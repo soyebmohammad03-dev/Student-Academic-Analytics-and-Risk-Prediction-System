@@ -30,6 +30,7 @@ from analytics.data.dictionary import COLUMNS, COLUMNS_BY_NAME
 from analytics.ml.config import Task
 from analytics.ml.metrics import positive_scores
 from analytics.ml.persistence import load_metadata, load_pipeline
+from analytics.ml.registry import MODELS
 from analytics.ml.results import ArtifactMetadata, Metrics
 from analytics.preprocessing import (
     RISK_THRESHOLD,
@@ -52,6 +53,20 @@ class InvalidRecordError(ValueError):
 
 class ModelNotAvailableError(LookupError):
     """The requested model was not selected, so it was not persisted."""
+
+
+class UnsupportedModelError(ValueError):
+    """The model name is not defined for the task at all."""
+
+
+def check_model_key(task: Task, model: str | None) -> None:
+    if model is None:
+        return
+    known = [spec.key for spec in MODELS[Task(task)]]
+    if model not in known:
+        raise UnsupportedModelError(
+            f"Unknown {task} model {model!r}; defined models: {', '.join(known)}."
+        )
 
 
 def required_attributes(scenario: Scenario) -> tuple[str, ...]:
@@ -183,6 +198,7 @@ class PredictionService:
         model: str | None = None,
     ) -> PredictionResult:
         task, scenario = Task(task), Scenario(scenario)
+        check_model_key(task, model)
         X = record_frame(record, scenario)
         meta, pipeline = self.model(cohort, task, scenario)
         if model is not None and model != meta.model:

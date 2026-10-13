@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
 from analytics.data import Cohort
 from analytics.interpret.results import (
@@ -12,7 +12,7 @@ from analytics.interpret.results import (
 from analytics.ml.config import Task
 from analytics.preprocessing import Scenario
 from analytics.risk.results import RiskProfiles, SuggestionSet
-from app.api.deps import DatasetStoreDep, ModelStoreDep
+from app.api.deps import RiskServiceDep
 from app.schemas.dataset import ErrorResponse
 from app.schemas.interpretability import (
     ExplainRequest,
@@ -21,14 +21,8 @@ from app.schemas.interpretability import (
     ScenarioSensitivityRequest,
     SensitivityRequest,
 )
-from app.services.interpretability import RiskService, get_risk_service
 
-
-def _service(store: DatasetStoreDep, models: ModelStoreDep) -> RiskService:
-    return get_risk_service(store, models)
-
-
-ServiceDep = Annotated[RiskService, Depends(_service)]
+ServiceDep = RiskServiceDep
 _errors = {
     404: {"model": ErrorResponse, "description": "Model not persisted"},
     422: {"model": ErrorResponse, "description": "Invalid request or feature record"},

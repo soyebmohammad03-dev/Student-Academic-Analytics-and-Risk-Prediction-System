@@ -66,8 +66,12 @@ def output_label(task: Task, score_kind: str | None) -> str:
     return "SVM decision score for academic risk (not a probability)"
 
 
-def _ranked(rows: list[tuple[str, str, str, float, float | None]]) -> list[ImportanceItem]:
-    rows = sorted(rows, key=lambda r: -abs(r[3]))
+def _ranked(
+    rows: list[tuple[str, str, str, float, float | None]], *, by_magnitude: bool = False
+) -> list[ImportanceItem]:
+    """Rank by value (largest first). Only signed coefficients rank by magnitude: a
+    negative permutation importance means no measurable reliance, not a large effect."""
+    rows = sorted(rows, key=lambda r: -abs(r[3]) if by_magnitude else -r[3])
     return [
         ImportanceItem(feature=f, attribute=a, label=lbl, value=v, std=s, rank=i + 1)
         for i, (f, a, lbl, v, s) in enumerate(rows)
@@ -267,7 +271,7 @@ def coefficient_importance(meta: ArtifactMetadata, pipeline) -> ImportanceResult
         "Model coefficients",
         f"Fitted on the training set (n = {meta.n_train}).",
         unit,
-        _ranked(rows),
+        _ranked(rows, by_magnitude=True),
         limitations,
     )
 

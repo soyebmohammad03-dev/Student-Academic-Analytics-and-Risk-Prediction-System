@@ -22,6 +22,10 @@ CSV_SEPARATOR = ";"
 class DatasetNotFoundError(FileNotFoundError):
     """Raised when a cohort file has not been downloaded."""
 
+    def __init__(self, message: str, filename: str = ""):
+        super().__init__(message)
+        self.public_filename = filename
+
 
 @dataclass(frozen=True)
 class LoadedCohort:
@@ -43,7 +47,8 @@ def load_cohort(raw_dir: Path, cohort: Cohort) -> LoadedCohort:
     if not path.is_file():
         raise DatasetNotFoundError(
             f"{info.filename} not found in {raw_dir}. "
-            "Run `python -m analytics.data.download` from the backend directory."
+            "Run `python -m analytics.data.download` from the backend directory.",
+            info.filename,
         )
 
     raw = pd.read_csv(path, sep=CSV_SEPARATOR, dtype=str, keep_default_na=False, na_values=[""])

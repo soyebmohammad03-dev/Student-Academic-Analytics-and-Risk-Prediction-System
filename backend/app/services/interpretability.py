@@ -1,9 +1,10 @@
 """Interpretability and risk analysis for the API.
 
-Global importance is read from ``models/interpretability.json`` (written offline by
-``python -m analytics.interpret.build``). Explanations, sensitivity experiments,
-profiles and suggestions are computed on request from the persisted models and the
-cached cohort data; each is bounded (one batched Shapley estimate per explanation).
+Global importance comes from ``models/interpretability.json`` (written offline by
+``python -m analytics.interpret.build``) and is cached by the pipeline until the file
+changes. Explanations, sensitivity experiments and suggestions are computed on request
+from the persisted models and the cached cohort data; each is bounded (one batched
+Shapley estimate per explanation). Profiles are cached per cohort version.
 """
 
 from __future__ import annotations
@@ -13,76 +14,43 @@ from collections.abc import Mapping
 from typing import Any
 
 from analytics.data import Cohort
-from analytics.interpret import CohortData, Interpreter
-from analytics.interpret.build import load as load_interpretability
-from analytics.interpret.results import InterpretabilityRun, ModelInterpretation
+from analytics.interpret.results import ModelInterpretation
 from analytics.ml.config import Task
 from analytics.ml.predict import validated_record
-from analytics.ml.results import ModelArtifactError
-from analytics.preprocessing import AnalyticalDataset, Scenario, prepare_cohort
+from analytics.pipeline import AnalyticsPipeline
+from analytics.preprocessing import AnalyticalDataset, Scenario
 from analytics.preprocessing.features import add_engineered_features
-from analytics.risk import PROFILE_VARIABLES, risk_profiles, suggest
+from analytics.risk import PROFILE_VARIABLES, suggest
 from analytics.risk.results import RiskProfiles, SuggestionSet
 from analytics.statistics.groups import GROUPINGS
 from app.schemas.interpretability import GroupFinding, RiskInsights
-from app.services.dataset import CohortEntry, DatasetStore
-from app.services.models import ModelStore
 
 
 class RiskService:
-    def __init__(self, store: DatasetStore, models: ModelStore):
-        self.store = store
-        self.models = models
-        self.interpreter = Interpreter(models.predictions, self._cohort_data)
-        self._datasets: dict[Cohort, tuple[CohortEntry, AnalyticalDataset]] = {}
-        self._profiles: dict[Cohort, tuple[CohortEntry, RiskProfiles]] = {}
-        self._run: tuple[tuple[int, int], InterpretabilityRun] | None = None
-        self._lock = threading.Lock()
+    """API view of interpretability and risk analysis, backed by the shared pipeline."""
+
+    def __init__(self, pipeline: AnalyticsPipeline):
+        self.pipeline = pipeline
+        self.interpreter = pipeline.interpreter
 
     def dataset(self, cohort: Cohort) -> AnalyticalDataset:
-        entry = self.store.get(cohort)
-        with self._lock:
-            cached = self._datasets.get(cohort)
-            if cached is None or cached[0] is not entry:
-                cached = (entry, prepare_cohort(entry.loaded, entry.report))
-                self._datasets[cohort] = cached
-            return cached[1]
-
-    def _cohort_data(self, cohort: Cohort, random_state: int) -> CohortData:
-        return CohortData.from_dataset(self.dataset(cohort), random_state)
+        return self.pipeline.dataset(cohort)
 
     # --- Global importance ------------------------------------------------------------
 
     def importance(self, cohort: Cohort, task: Task, scenario: Scenario) -> ModelInterpretation:
-        path = self.models.models_dir / "interpretability.json"
-        stat = path.stat() if path.is_file() else None
-        stamp = (stat.st_mtime_ns, stat.st_size) if stat else (0, 0)
-        with self._lock:
-            if self._run is None or self._run[0] != stamp or not stat:
-                self._run = (stamp, load_interpretability(self.models.models_dir))
-            run = self._run[1]
-        for item in run.items:
-            if item.cohort == str(cohort) and item.task is task and item.scenario is scenario:
-                return item
-        raise ModelArtifactError(f"No importance results for {cohort} / {task} / {scenario}.")
+        return self.pipeline.importance(cohort, task, scenario)
 
     # --- Group-level and suggestions -------------------------------------------------
 
     def profiles(self, cohort: Cohort) -> RiskProfiles:
-        entry = self.store.get(cohort)
-        with self._lock:
-            cached = self._profiles.get(cohort)
-        if cached is None or cached[0] is not entry:
-            cached = (entry, risk_profiles(self.dataset(cohort).analytical, str(cohort)))
-            with self._lock:
-                self._profiles[cohort] = cached
-        return cached[1]
+        return self.pipeline.profiles(cohort)
 
     def suggestions(
         self, cohort: Cohort, scenario: Scenario, record: Mapping[str, Any]
     ) -> SuggestionSet:
         validated_record(record, scenario)
-        flag = self.models.predictions.predict(cohort, Task.CLASSIFICATION, scenario, record)
+        flag = self.pipeline.predictions.predict(cohort, Task.CLASSIFICATION, scenario, record)
         return suggest(self.dataset(cohort).analytical, str(cohort), record, flag)
 
     def group_findings(
@@ -132,13 +100,12 @@ class RiskService:
         )
 
 
-_services: dict[tuple[int, int], RiskService] = {}
+_services: dict[int, RiskService] = {}
 _lock = threading.Lock()
 
 
-def get_risk_service(store: DatasetStore, models: ModelStore) -> RiskService:
-    key = (id(store), id(models))
+def get_risk_service(pipeline: AnalyticsPipeline) -> RiskService:
     with _lock:
-        if key not in _services:
-            _services[key] = RiskService(store, models)
-        return _services[key]
+        if id(pipeline) not in _services:
+            _services[id(pipeline)] = RiskService(pipeline)
+        return _services[id(pipeline)]

@@ -1,8 +1,9 @@
 """Dataset access for the API.
 
-Each cohort is loaded and validated once, then served from memory. The cache key
-includes the file's modification time and size, so re-running the download script is
-picked up without restarting the server, while ordinary requests never re-read the CSV.
+Cohorts are loaded and validated by ``AnalyticsPipeline`` once per file version (keyed
+on modification time and size), so re-running the download script is picked up without
+restarting the server, while ordinary requests never re-read the CSV. This module adds
+the API-specific views: summary, schema, quality, paginated records and overlap.
 """
 
 from __future__ import annotations
@@ -10,8 +11,6 @@ from __future__ import annotations
 import math
 import threading
 from dataclasses import dataclass
-from functools import lru_cache
-from pathlib import Path
 
 import pandas as pd
 
@@ -22,11 +21,9 @@ from analytics.data import (
     LoadedCohort,
     ValidationReport,
     find_overlap,
-    load_cohort,
-    validate,
 )
 from analytics.data.dictionary import SOURCE as DICTIONARY_SOURCE
-from analytics.data.loader import cohort_path
+from analytics.pipeline import AnalyticsPipeline, CohortVersion
 from app.schemas import dataset as s
 
 PASS_MARK = 10
@@ -47,30 +44,32 @@ class CohortEntry:
     report: ValidationReport
     #: Lower-cased, space-joined cell values per row, for substring search.
     search_index: pd.Series
+    #: The pipeline's cohort version (dataset, statistics, profiles, reports).
+    version: CohortVersion
 
 
 class DatasetStore:
-    def __init__(self, raw_dir: Path) -> None:
-        self.raw_dir = raw_dir
-        self._entries: dict[Cohort, tuple[tuple[int, int], CohortEntry]] = {}
+    """API view of the cohorts. Loading, validation and caching live in the pipeline."""
+
+    def __init__(self, pipeline: AnalyticsPipeline) -> None:
+        self.pipeline = pipeline
+        self.raw_dir = pipeline.raw_dir
+        self._entries: dict[Cohort, CohortEntry] = {}
         self._lock = threading.Lock()
 
     def get(self, cohort: Cohort) -> CohortEntry:
-        """Return the cached cohort, reloading only if the file changed on disk."""
-        path = cohort_path(self.raw_dir, cohort)
-        stat = path.stat() if path.is_file() else None
-        stamp = (stat.st_mtime_ns, stat.st_size) if stat else (0, 0)
+        """The current cohort version (reloaded only when the file changes)."""
+        version = self.pipeline.cohort(cohort)  # raises DatasetNotFoundError
         with self._lock:
-            cached = self._entries.get(cohort)
-            if cached and cached[0] == stamp and stat:
-                return cached[1]
-            loaded = load_cohort(self.raw_dir, cohort)  # raises DatasetNotFoundError
-            entry = CohortEntry(
-                loaded=loaded,
-                report=validate(loaded),
-                search_index=loaded.raw.fillna("").agg(" ".join, axis=1).str.lower(),
-            )
-            self._entries[cohort] = (stamp, entry)
+            entry = self._entries.get(cohort)
+            if entry is None or entry.version is not version:
+                entry = CohortEntry(
+                    loaded=version.loaded,
+                    report=version.validation,
+                    search_index=version.loaded.raw.fillna("").agg(" ".join, axis=1).str.lower(),
+                    version=version,
+                )
+                self._entries[cohort] = entry
             return entry
 
     # --- Response builders -------------------------------------------------------
@@ -233,6 +232,12 @@ class DatasetStore:
         )
 
 
-@lru_cache
-def get_store(raw_dir: Path) -> DatasetStore:
-    return DatasetStore(raw_dir)
+def get_store(pipeline: AnalyticsPipeline) -> DatasetStore:
+    with _stores_lock:
+        if id(pipeline) not in _stores:
+            _stores[id(pipeline)] = DatasetStore(pipeline)
+        return _stores[id(pipeline)]
+
+
+_stores: dict[int, DatasetStore] = {}
+_stores_lock = threading.Lock()

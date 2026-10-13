@@ -841,3 +841,28 @@ reading note.
   absences comes from these students. Without them, the early model shows no
   measurable reliance on absences, and the importance roughly halves for the mid-year
   and full-history models.
+
+## 8. Integration and consistency (Phase 7)
+
+The integrated backend computes nothing new. It guarantees that every endpoint reports
+the same quantities in the same way:
+
+- **One analytical dataset per cohort version.** Statistics, EDA, preprocessing
+  reports, risk profiles, explanations and the dashboard all read the same prepared
+  dataset. Tests check that the observed at-risk count is identical across
+  `/dashboard/summary`, `/risk/profiles`, `/preprocessing/summary` and
+  `/statistics/distributions` (130 of 395 in Mathematics, 100 of 649 in Portuguese).
+- **Observed versus predicted.** The dashboard labels historical proportions
+  `observed_historical`. These are students whose G3 was below 10, not future risk.
+  Model scores are labelled `model_evaluation`. Predictions and probabilities appear
+  only in prediction and explanation responses, where the probability caveats of §7.4
+  apply.
+- **Model metrics are read, never recomputed.** Dashboard and pipeline figures come
+  from the recorded training run, and tests check that they equal
+  `/models/{regression,classification}`.
+- **No substitution.** An unsupported cohort, scenario, task or model is rejected with
+  an explicit error. Each scenario's model only ever receives that scenario's inputs.
+- **Importance ranking correction.** Permutation and mean |Shapley| importance are now
+  ranked by value. Phase 6 had ranked them by absolute value, which could place a small
+  negative permutation value (no measurable reliance) near the top. The values were
+  unchanged; the ranking and the generated report were rebuilt without retraining.

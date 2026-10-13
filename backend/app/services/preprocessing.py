@@ -1,8 +1,6 @@
-"""Preprocessing metadata for the API. Reuses the cached, validated cohorts."""
+"""Preprocessing metadata for the API. Reports are cached per cohort version and scenario."""
 
 from __future__ import annotations
-
-import threading
 
 from analytics.data import Cohort
 from analytics.preprocessing import (
@@ -11,29 +9,10 @@ from analytics.preprocessing import (
     RISK_LABEL,
     RISK_THRESHOLD,
     SCENARIOS,
-    PreprocessingReport,
     Scenario,
-    build_report,
-    prepare_cohort,
 )
 from app.schemas import preprocessing as s
-from app.services.dataset import CohortEntry, DatasetStore
-
-#: (cohort, scenario) -> (cohort entry the report was built from, report)
-_cache: dict[tuple[Cohort, Scenario], tuple[CohortEntry, PreprocessingReport]] = {}
-_lock = threading.Lock()
-
-
-def _report(cohort: Cohort, entry: CohortEntry, scenario: Scenario) -> PreprocessingReport:
-    """Build once per cohort version; a re-downloaded file yields a new entry and report."""
-    key = (cohort, scenario)
-    with _lock:
-        cached = _cache.get(key)
-        if cached is None or cached[0] is not entry:
-            dataset = prepare_cohort(entry.loaded, entry.report)
-            cached = (entry, build_report(dataset, scenario))
-            _cache[key] = cached
-        return cached[1]
+from app.services.dataset import DatasetStore
 
 
 def _risk(dist) -> s.RiskDistributionOut:
@@ -45,7 +24,7 @@ def _risk(dist) -> s.RiskDistributionOut:
 def preprocessing_summary(
     store: DatasetStore, cohort: Cohort, scenario: Scenario
 ) -> s.PreprocessingSummary:
-    report = _report(cohort, store.get(cohort), scenario)
+    report = store.get(cohort).version.preprocessing_report(scenario)
     spec = SCENARIOS[scenario]
     return s.PreprocessingSummary(
         cohort=cohort,

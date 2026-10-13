@@ -21,6 +21,7 @@ scikit-learn version.
 from __future__ import annotations
 
 import hashlib
+import logging
 import platform
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,11 +37,13 @@ from analytics.data import COHORTS
 from analytics.ml.config import SearchMode, Task, TrainingConfig
 from analytics.ml.evaluation import TUNING_LABEL, Evaluation, describe_splitter
 from analytics.ml.metrics import score_kind
-from analytics.ml.registry import ESTIMATOR_STEP, search_space
+from analytics.ml.registry import ESTIMATOR_STEP, get_spec, search_space
 from analytics.ml.results import ArtifactMetadata, MlResults, ModelArtifactError, RunInfo
 from analytics.ml.selection import METRIC_LABEL, PRIMARY_METRIC
 from analytics.ml.training import TrainedCohort
 from analytics.preprocessing import REGRESSION_TARGET, RISK_LABEL, TEST_SIZE, Scenario
+
+log = logging.getLogger("analytics.ml")
 
 SCHEMA_VERSION = 1
 RESULTS_FILE = "ml_results.json"
@@ -149,10 +152,14 @@ def load_results(models_dir: Path) -> MlResults:
     path = models_dir / RESULTS_FILE
     if not path.is_file():
         raise ModelArtifactError(
-            f"No training results in {models_dir}. Run `python -m analytics.ml.train` "
-            "from backend/."
+            "No training results found. Run `python -m analytics.ml.train` from backend/."
         )
-    return MlResults.model_validate_json(path.read_text())
+    try:
+        return MlResults.model_validate_json(path.read_text())
+    except ValueError as exc:
+        raise ModelArtifactError(
+            f"{RESULTS_FILE} is unreadable or from an incompatible version; retrain."
+        ) from exc
 
 
 def load_metadata(
@@ -176,4 +183,27 @@ def load_pipeline(models_dir: Path, meta: ArtifactMetadata) -> Pipeline:
             f"{meta.artifact} was trained with scikit-learn {trained_with}; this environment "
             f"has {sklearn.__version__}. Retrain with `python -m analytics.ml.train`."
         )
-    return joblib.load(path)
+    try:
+        pipeline = joblib.load(path)
+    except Exception as exc:  # corrupted or truncated pickle
+        raise ModelArtifactError(f"{meta.artifact} could not be loaded; retrain.") from exc
+    _check_contents(pipeline, meta)
+    log.info("model loaded", extra={"artifact": meta.artifact, "model": meta.model})
+    return pipeline
+
+
+def _check_contents(pipeline, meta: ArtifactMetadata) -> None:
+    """The loaded object must be the pipeline its metadata describes."""
+    expected = type(get_spec(meta.task, meta.model).factory(0))
+    try:
+        estimator = pipeline.named_steps["model"]
+        inputs = list(pipeline.named_steps["prep"].named_steps["guard"].feature_names_in_)
+    except (AttributeError, KeyError) as exc:
+        raise ModelArtifactError(f"{meta.artifact} is not a preprocessing pipeline.") from exc
+    if type(estimator) is not expected:
+        raise ModelArtifactError(
+            f"{meta.artifact} contains {type(estimator).__name__}, but its metadata says "
+            f"{meta.model}."
+        )
+    if inputs != meta.feature_columns:
+        raise ModelArtifactError(f"{meta.artifact} expects different inputs than its metadata.")

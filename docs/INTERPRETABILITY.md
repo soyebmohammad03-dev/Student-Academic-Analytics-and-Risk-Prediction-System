@@ -19,9 +19,9 @@ Permutation repeats: 30. Shapley samples per test student: 128. Seed: 42.
 | 3 | Extra educational support (0.113) | Mother's job (0.304) | Sex (0.070) | Mother's job (0.053) |
 | 4 | Going out (0.077) | Extra educational support (0.269) | Mother's job (0.054) | Age (0.041) |
 | 5 | Sex (0.073) | Age (0.240) | Mother's education (0.052) | Going out (0.037) |
-| 6 | Age (-0.063) | Sex (0.192) | Age (-0.042) | Mother's education (0.036) |
-| 7 | Father's education (-0.043) | Mother's education (0.188) | Health status (0.036) | Guardian (0.035) |
-| 8 | Health status (0.040) | Guardian (0.155) | Workday alcohol use (0.023) | Free time (0.033) |
+| 6 | Health status (0.040) | Sex (0.192) | Health status (0.036) | Mother's education (0.036) |
+| 7 | Mother's job (0.024) | Mother's education (0.188) | Workday alcohol use (0.023) | Guardian (0.035) |
+| 8 | Wants higher education (0.020) | Guardian (0.155) | Weekly study time (0.023) | Free time (0.033) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -62,10 +62,10 @@ Units and data:
 | 2 | School absences (1.133) | School absences (0.700) | School absences (0.515) | School absences (0.096) |
 | 3 | Age (0.098) | First period grade (0.084) | Age (0.057) | Age (0.018) |
 | 4 | Reason for school choice (0.055) | Age (0.077) | Reason for school choice (0.024) | Reason for school choice (0.012) |
-| 5 | Weekly study time (0.033) | Reason for school choice (0.068) | Family size (-0.016) | Health status (0.009) |
-| 6 | Health status (-0.023) | Guardian (0.041) | Family relationships (0.015) | Guardian (0.009) |
-| 7 | Guardian (-0.017) | Family relationships (0.039) | Mother's job (0.011) | Family relationships (0.008) |
-| 8 | Mother's job (-0.016) | Father's job (0.034) | First period grade (0.011) | First period grade (0.007) |
+| 5 | Weekly study time (0.033) | Reason for school choice (0.068) | Family relationships (0.015) | Health status (0.009) |
+| 6 | First period grade (0.015) | Guardian (0.041) | Mother's job (0.011) | Guardian (0.009) |
+| 7 | Extra-curricular activities (0.015) | Family relationships (0.039) | First period grade (0.011) | Family relationships (0.008) |
+| 8 | Mother's education (0.013) | Father's job (0.034) | Weekend alcohol use (0.010) | First period grade (0.007) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -82,12 +82,12 @@ Units and data:
 | --- | --- | --- |
 | 1 | Past class failures (0.106) | Past class failures (0.306) |
 | 2 | Going out (0.073) | Going out (0.168) |
-| 3 | Family relationships (-0.034) | Age (0.145) |
-| 4 | Workday alcohol use (-0.023) | Family relationships (0.118) |
-| 5 | Age (0.019) | Family educational support (0.089) |
-| 6 | Father's job (-0.019) | Health status (0.086) |
-| 7 | Mother's job (0.018) | Reason for school choice (0.083) |
-| 8 | Extra educational support (0.015) | School absences (0.076) |
+| 3 | Age (0.019) | Age (0.145) |
+| 4 | Mother's job (0.018) | Family relationships (0.118) |
+| 5 | Extra educational support (0.015) | Family educational support (0.089) |
+| 6 | Weekend alcohol use (0.013) | Health status (0.086) |
+| 7 | Sex (0.012) | Reason for school choice (0.083) |
+| 8 | Health status (0.011) | School absences (0.076) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -104,10 +104,10 @@ Units and data:
 | 2 | Going out (0.025) | Past class failures (0.031) | Past class failures (+0.167) |
 | 3 | Past class failures (0.021) | Age (0.020) | Age (+0.112) |
 | 4 | Age (0.015) | Going out (0.016) | Going out (+0.106) |
-| 5 | Workday alcohol use (-0.007) | Family relationships (0.014) | Family relationships (-0.085) |
-| 6 | Family relationships (-0.005) | Workday alcohol use (0.009) | Any past failures (yes) (+0.071) |
-| 7 | Weekend alcohol use (0.004) | Father's job (0.008) | Romantic relationship = Yes (+0.055) |
-| 8 | Reason for school choice (0.004) | Health status (0.007) | Reason for school choice = Course preference (+0.050) |
+| 5 | Weekend alcohol use (0.004) | Family relationships (0.014) | Family relationships (-0.085) |
+| 6 | Reason for school choice (0.004) | Workday alcohol use (0.009) | Any past failures (yes) (+0.071) |
+| 7 | Health status (0.003) | Father's job (0.008) | Romantic relationship = Yes (+0.055) |
+| 8 | Romantic relationship (0.003) | Health status (0.007) | Reason for school choice = Course preference (+0.050) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -133,8 +133,8 @@ Probability calibration on the test set (n = 79): mean predicted 0.462 vs observ
 | --- | --- | --- | --- |
 | 1 | Second period grade (0.279) | Second period grade (0.337) | Second period grade (0.933) |
 | 2 | First period grade (0.050) | First period grade (0.089) | Age (0.033) |
-| 3 | Father's education (-0.008) | Age (0.050) | First period grade (0.020) |
-| 4 | Age (0.003) | Father's education (0.016) | Father's education (0.015) |
+| 3 | Age (0.003) | Age (0.050) | First period grade (0.020) |
+| 4 | Father's education (-0.008) | Father's education (0.016) | Father's education (0.015) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -258,11 +258,11 @@ Units and data:
 | 1 | First period grade (2.105) | First period grade (1.972) | First period grade (2.099) | First period grade (+2.319) |
 | 2 | Past class failures (0.079) | Past class failures (0.316) | Past class failures (0.109) | Any past failures (yes) (-1.491) |
 | 3 | Age (0.033) | Age (0.163) | Age (0.050) | Wants higher education = Yes (+0.454) |
-| 4 | Workday alcohol use (-0.026) | Weekend alcohol use (0.158) | Health status (0.022) | Mother's job = Health care related (+0.339) |
-| 5 | Reason for school choice (0.026) | Health status (0.144) | Family relationships (0.017) | Reason for school choice = Other (-0.304) |
-| 6 | School absences (0.025) | Father's job (0.135) | Weekend alcohol use (0.017) | Father's job = At home (+0.288) |
-| 7 | Weekend alcohol use (0.017) | School absences (0.124) | Reason for school choice (0.014) | Father's job = Other (-0.282) |
-| 8 | Romantic relationship (0.014) | Travel time (0.119) | Wants higher education (0.013) | Father's job = Teacher (+0.282) |
+| 4 | Reason for school choice (0.026) | Weekend alcohol use (0.158) | Health status (0.022) | Mother's job = Health care related (+0.339) |
+| 5 | School absences (0.025) | Health status (0.144) | Family relationships (0.017) | Reason for school choice = Other (-0.304) |
+| 6 | Weekend alcohol use (0.017) | Father's job (0.135) | Weekend alcohol use (0.017) | Father's job = At home (+0.288) |
+| 7 | Romantic relationship (0.014) | School absences (0.124) | Reason for school choice (0.014) | Father's job = Other (-0.282) |
+| 8 | Mother's job (0.014) | Travel time (0.119) | Wants higher education (0.013) | Father's job = Teacher (+0.282) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -282,9 +282,9 @@ Units and data:
 | 3 | Past class failures (0.021) | Past class failures (0.141) | Past class failures (0.039) | First period grade (+0.422) |
 | 4 | School absences (0.015) | Reason for school choice (0.107) | Travel time (0.016) | Extra educational support = Yes (-0.311) |
 | 5 | Reason for school choice (0.015) | Travel time (0.102) | Father's job (0.009) | Reason for school choice = Other (-0.280) |
-| 6 | Workday alcohol use (-0.012) | School absences (0.100) | Workday alcohol use (-0.009) | Wants higher education = Yes (+0.272) |
-| 7 | Mother's job (0.010) | Weekend alcohol use (0.095) | Mother's education (0.009) | Father's job = At home (+0.249) |
-| 8 | Mother's education (0.009) | Mother's education (0.088) | School (-0.008) | Extra paid classes = Yes (-0.242) |
+| 6 | Mother's job (0.010) | School absences (0.100) | Mother's education (0.009) | Wants higher education = Yes (+0.272) |
+| 7 | Mother's education (0.009) | Weekend alcohol use (0.095) | Weekend alcohol use (0.006) | Father's job = At home (+0.249) |
+| 8 | Father's job (0.008) | Mother's education (0.088) | Mother's job (0.006) | Extra paid classes = Yes (-0.242) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -304,9 +304,9 @@ Units and data:
 | 3 | Workday alcohol use (0.015) | School (0.032) | Weekly study time (-0.237) |
 | 4 | Wants higher education (0.014) | Father's education (0.029) | Any past failures (yes) (+0.188) |
 | 5 | Home address type (0.009) | Weekend alcohol use (0.018) | Wants higher education = Yes (-0.147) |
-| 6 | Free time (-0.008) | Free time (0.017) | Father's education (-0.146) |
-| 7 | Extra-curricular activities (-0.007) | Mother's education (0.017) | Free time (+0.103) |
-| 8 | Going out (-0.006) | Guardian (0.014) | Extra-curricular activities = Yes (-0.102) |
+| 6 | Weekend alcohol use (0.004) | Free time (0.017) | Father's education (-0.146) |
+| 7 | Family relationships (0.003) | Mother's education (0.017) | Free time (+0.103) |
+| 8 | School absences (0.003) | Guardian (0.014) | Extra-curricular activities = Yes (-0.102) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -331,13 +331,13 @@ Probability calibration on the test set (n = 130): mean predicted 0.400 vs obser
 | Rank | Permutation importance (held-out test set) | Mean absolute Shapley value | Model coefficients |
 | --- | --- | --- | --- |
 | 1 | First period grade (0.361) | First period grade (0.228) | First period grade (-2.102) |
-| 2 | Free time (-0.011) | Past class failures (0.039) | School = Mousinho da Silveira (+0.503) |
-| 3 | Weekend alcohol use (-0.006) | Age (0.032) | Past class failures (+0.397) |
-| 4 | Extra-curricular activities (-0.005) | School (0.027) | Extra-curricular activities = Yes (-0.365) |
-| 5 | Going out (-0.005) | Extra-curricular activities (0.020) | Age (-0.360) |
-| 6 | School (0.004) | Guardian (0.017) | Any past failures (yes) (+0.343) |
-| 7 | Father's job (-0.003) | Free time (0.016) | Father's job = At home (-0.246) |
-| 8 | Mother's job (-0.003) | Weekend alcohol use (0.016) | Wants higher education = Yes (-0.228) |
+| 2 | School (0.004) | Past class failures (0.039) | School = Mousinho da Silveira (+0.503) |
+| 3 | Wants higher education (0.002) | Age (0.032) | Past class failures (+0.397) |
+| 4 | Travel time (0.002) | School (0.027) | Extra-curricular activities = Yes (-0.365) |
+| 5 | Guardian (0.001) | Extra-curricular activities (0.020) | Age (-0.360) |
+| 6 | Parents' cohabitation (0.000) | Guardian (0.017) | Any past failures (yes) (+0.343) |
+| 7 | Family relationships (0.000) | Free time (0.016) | Father's job = At home (-0.246) |
+| 8 | School absences (0.000) | Weekend alcohol use (0.016) | Wants higher education = Yes (-0.228) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 
@@ -365,10 +365,10 @@ Probability calibration on the test set (n = 130): mean predicted 0.294 vs obser
 | 2 | First period grade (0.062) | First period grade (0.136) | First period grade (0.336) |
 | 3 | Past class failures (0.004) | Past class failures (0.024) | Past class failures (0.096) |
 | 4 | Family relationships (0.003) | School (0.018) | School (0.036) |
-| 5 | Weekly study time (-0.003) | Family relationships (0.007) | Wants higher education (0.013) |
-| 6 | School absences (-0.003) | Weekend alcohol use (0.006) | School absences (0.013) |
-| 7 | Mother's job (-0.002) | Weekly study time (0.006) | Mother's job (0.011) |
-| 8 | Reason for school choice (-0.002) | Mother's job (0.005) | Reason for school choice (0.010) |
+| 5 | Wants higher education (0.001) | Family relationships (0.007) | Wants higher education (0.013) |
+| 6 | Extra paid classes (-0.000) | Weekend alcohol use (0.006) | School absences (0.013) |
+| 7 | Health status (-0.000) | Weekly study time (0.006) | Mother's job (0.011) |
+| 8 | Parents' cohabitation (-0.000) | Mother's job (0.005) | Reason for school choice (0.010) |
 
 Attributes with a value of exactly 0 (not used by the model) are omitted.
 

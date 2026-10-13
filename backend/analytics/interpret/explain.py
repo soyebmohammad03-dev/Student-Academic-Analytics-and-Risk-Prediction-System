@@ -47,6 +47,7 @@ from analytics.ml.predict import (
     InvalidRecordError,
     ModelNotAvailableError,
     PredictionService,
+    check_model_key,
     validated_record,
 )
 from analytics.preprocessing import (
@@ -129,6 +130,7 @@ class Interpreter:
         self._lock = threading.Lock()
 
     def _context(self, cohort, task, scenario, model):
+        check_model_key(Task(task), model)
         meta, pipeline = self.service.model(Cohort(cohort), Task(task), Scenario(scenario))
         if model is not None and model != meta.model:
             raise ModelNotAvailableError(

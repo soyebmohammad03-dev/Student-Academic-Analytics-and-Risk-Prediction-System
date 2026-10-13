@@ -8,35 +8,29 @@ trains models itself.
 from __future__ import annotations
 
 import threading
-from functools import lru_cache
-from pathlib import Path
 
 from analytics.data import Cohort
-from analytics.ml import ModelArtifactError, PredictionService
+from analytics.ml import ModelArtifactError
 from analytics.ml.config import Task
-from analytics.ml.persistence import RESULTS_FILE, load_metadata, load_results
+from analytics.ml.persistence import load_metadata
 from analytics.ml.registry import MODELS, search_space
 from analytics.ml.results import MlResults
+from analytics.pipeline import AnalyticsPipeline
 from analytics.preprocessing import Scenario
 from app.schemas import models as s
 
 
 class ModelStore:
-    def __init__(self, models_dir: Path) -> None:
-        self.models_dir = models_dir
-        self.predictions = PredictionService(models_dir)
-        self._cached: tuple[tuple[int, int], MlResults] | None = None
-        self._lock = threading.Lock()
+    """API view of the trained models. Results and pipelines are cached by the pipeline."""
+
+    def __init__(self, pipeline: AnalyticsPipeline) -> None:
+        self.pipeline = pipeline
+        self.models_dir = pipeline.models_dir
+        self.predictions = pipeline.predictions
 
     def results(self) -> MlResults:
         """Raises ``ModelArtifactError`` when no training run exists."""
-        path = self.models_dir / RESULTS_FILE
-        stat = path.stat() if path.is_file() else None
-        stamp = (stat.st_mtime_ns, stat.st_size) if stat else (0, 0)
-        with self._lock:
-            if self._cached is None or self._cached[0] != stamp or not stat:
-                self._cached = (stamp, load_results(self.models_dir))
-            return self._cached[1]
+        return self.pipeline.ml_results()
 
     def catalog(self) -> s.ModelCatalog:
         models = [
@@ -98,6 +92,12 @@ class ModelStore:
         )
 
 
-@lru_cache
-def get_model_store(models_dir: Path) -> ModelStore:
-    return ModelStore(models_dir)
+def get_model_store(pipeline: AnalyticsPipeline) -> ModelStore:
+    with _lock:
+        if id(pipeline) not in _stores:
+            _stores[id(pipeline)] = ModelStore(pipeline)
+        return _stores[id(pipeline)]
+
+
+_stores: dict[int, ModelStore] = {}
+_lock = threading.Lock()

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     project_name: str = "Student Academic Analytics and Risk Prediction System"
     environment: Literal["development", "test", "production"] = "development"
     api_prefix: str = "/api/v1"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
     data_dir: Path = REPO_ROOT / "data"

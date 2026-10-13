@@ -13,7 +13,7 @@ meaningful commit and a push. Phases are never combined into a single commit.
 | 4     | Statistics & exploratory data analysis      | ✅ Complete |
 | 5     | Machine learning & model evaluation         | ✅ Complete |
 | 6     | Interpretability & academic risk analysis   | ✅ Complete |
-| 7     | End-to-end backend integration              | Planned     |
+| 7     | End-to-end backend integration              | ✅ Complete |
 | 8     | Complete Apple-style frontend               | Planned     |
 | 9     | Final validation, documentation & presentation readiness | Planned |
 
@@ -112,9 +112,24 @@ statistics so that both statistics and modelling build on the same analytical da
 - A functional Risk Analysis page (profiles and importance). The Prediction page is
   marked in progress; its form is Phase 8.
 
-## Phase 7 — End-to-end backend integration
-- Statistics, model and prediction endpoints, with model loading and input validation.
-- Consistent error handling and performance checks.
+## Phase 7 — End-to-end backend integration ✅
+- `analytics/pipeline.py`: one `AnalyticsPipeline` owns every cache, with one entry per
+  cohort or artefact file version. It provides independent steps, `readiness()` and
+  `summary()`. The API services are now thin views over it, and each cohort is
+  prepared once instead of three times.
+- New endpoints: `/ready`, `/dashboard/summary` and `/pipeline/summary`, with observed
+  facts kept separate from model evaluation.
+- Model lifecycle: integrity checks cover checksum, scikit-learn version, estimator
+  class and inputs. Corrupted artefacts return 503 instead of crashing. Requests never
+  train or download.
+- One error format for every status, including 404, 405 and 500, with no paths or
+  tracebacks. Unknown model names return 422. Invalid cohort files return 503
+  `dataset_invalid`.
+- Structured JSON logging and request ids.
+- Phase 6 importance ranking corrected (by value, not magnitude); results rebuilt
+  without retraining.
+- `docs/API.md` reference with measured request times; integration tests on synthetic
+  and real data.
 
 ## Phase 8 — Complete Apple-style frontend
 - Statistical Analysis, EDA, Model Comparison, Prediction and Risk Analysis pages.

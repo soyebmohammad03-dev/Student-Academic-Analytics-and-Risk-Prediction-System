@@ -44,6 +44,8 @@
 | `analytics/data/`       | Dataset acquisition, loading, validation, dictionary, cohort overlap |
 | `analytics/preprocessing/` | Targets, feature scenarios, leakage guards, sklearn preprocessor, split, report (Phase 3) |
 | `analytics/statistics/` | Descriptive stats, distributions, correlations, group comparisons, chi-square, outliers, research questions, EDA chart data, findings generator (Phase 4) |
+| `analytics/pipeline.py` | Unified pipeline: per-file-version caches, readiness, dashboard and pipeline summaries (Phase 7) |
+| `app/core/logging.py`   | Structured JSON logging (Phase 7) |
 | `analytics/interpret/`  | Attribute mapping, permutation-sampling Shapley values, global importance, calibration, individual explanations, sensitivity experiments, interpretability report (Phase 6) |
 | `analytics/risk/`       | Group-level academic-risk profiles and evidence-checked suggestions (Phase 6) |
 | `analytics/ml/`         | Model registry, nested CV and tuning, metrics, selection, error analysis, comparisons, persistence, prediction service, results report (Phase 5) |
@@ -221,14 +223,99 @@ and `/interpretability/importance`:
 The Prediction page is marked *in progress*. Its services exist in the API, and the
 input form is Phase 8 work.
 
+## Integrated backend (Phase 7)
+
+```
+                       ┌──────────────── AnalyticsPipeline (analytics/pipeline.py) ────────────────┐
+data/raw/*.csv ──stamp─▶ cohort(c) → CohortVersion: loaded · validation · dataset (prepared)       │
+                       │                 ├─ statistics → CohortAnalysis (descriptive … eda)        │
+                       │                 ├─ preprocessing_report(scenario)                         │
+                       │                 ├─ profiles (risk)                                        │
+                       │                 └─ explain_data(seed) (Shapley background)                │
+models/ml_results.json ─stamp─▶ ml_results()                                                         │
+models/selected/*      ──────▶ predictions: PredictionService (sha-checked, cached per checksum)    │
+models/interpretability.json ─stamp─▶ interpretability() · importance(c, task, scenario)            │
+                       │ interpreter: Interpreter(predictions, cohort data)                        │
+                       │ readiness() · overview(c) · selected_models() · summary(c, scenario)      │
+                       └────────────────────────────────────────────────────────────────────────────┘
+          ▲ one instance per (data dir, models dir): app/api/deps.py `get_pipeline`
+          │
+  DatasetStore · ModelStore · RiskService · get_analysis  (thin API views in app/services)
+```
+
+- **One owner for every cache.** Before Phase 7, the statistics, preprocessing, model
+  and risk services each kept their own cache, and each cohort was prepared up to
+  three times. Now one `AnalyticsPipeline` per settings owns them all:
+  - **Cohort files:** a `FileCache` keyed on modification time and size holds one
+    `CohortVersion` per file version. Everything derived from that version (prepared
+    dataset, statistics, preprocessing reports, risk profiles, explanation
+    background) is computed lazily, once.
+  - **Model artefacts:** training results and interpretability results are cached the
+    same way. The prediction service caches each pipeline per artefact checksum.
+
+  A changed file produces a new entry on the next request, so stale results are never
+  served. Tests cover this.
+- **No hidden work.** API startup and requests never download data or train models.
+  Those are explicit commands, and tests fail if a request calls them.
+- **Readiness.** `GET /ready` reports each component separately:
+  - **API:** always available while it responds.
+  - **Dataset:** both files present and matching their pinned checksums.
+  - **Statistics:** available when the dataset is present and validates.
+  - **Models:** every selected artefact present, checksum-verified, loadable, built
+    with this scikit-learn version, and matching its metadata (estimator class and
+    inputs).
+  - **Interpretability:** present and built from the current training run.
+
+  The overall status is `ready` or `degraded`, never a false "ready". Each missing
+  component names the command that fixes it.
+- **Model integrity.** `load_pipeline` refuses an artefact whose checksum, scikit-learn
+  version, estimator class or input columns disagree with its metadata. A corrupted
+  pickle becomes `ModelArtifactError` (API: `503 models_unavailable`), not a crash.
+- **Errors and logging.**
+  - Every error body is `{code, detail}`, including 404, 405 and unexpected 500s.
+  - Messages never contain server paths, settings or tracebacks.
+  - Logs are JSON lines on stderr: one `request` line per call (method, path, status,
+    `duration_ms`, `request_id`), a warning for each rejected request, and the full
+    traceback for unexpected errors.
+  - The level is set by `SAARPS_LOG_LEVEL`, and `X-Request-ID` links a client report
+    to the log line.
+- **Dashboard and pipeline summaries.**
+  - `GET /dashboard/summary` reports observed cohort facts (`kind: observed_historical`)
+    separately from model evaluation scores (`kind: model_evaluation`). It degrades
+    gracefully when artefacts are missing.
+  - `GET /pipeline/summary` runs every step for one cohort and scenario and reports
+    each step's availability. The same summary is available offline with
+    `python -m analytics.pipeline --cohort math --scenario early`.
+
+Measured request times and response sizes are in [API.md](API.md#performance-measured).
+They do not justify extra infrastructure such as Redis: warm requests take about 1–2 ms,
+explanations about 0.2 s by design, and the largest response is about 36 KB.
+
+### Breaking API changes in Phase 7
+
+- 404 and 405 responses now use `{code, detail}` (`not_found`, `method_not_allowed`)
+  instead of FastAPI's `{detail}`.
+- `dataset_unavailable` and `models_unavailable` details no longer include server
+  paths.
+- An unknown `model` name now returns `422 invalid_request`. A defined but unpersisted
+  model still returns `404 model_not_available`.
+- A cohort file that fails validation returns `503 dataset_invalid` from analysis
+  endpoints, instead of an unhandled 500.
+- Permutation and Shapley importance items are ranked by value (largest first);
+  previously they were ranked by absolute value. Only coefficients rank by magnitude.
+  `interpretability.json` and `INTERPRETABILITY.md` were rebuilt without retraining.
+
 ## API (current)
 
-All paths are under `/api/v1`. `cohort` is required where listed and must be `math`
+All paths are under `/api/v1`. A request/response reference for the frontend is in [API.md](API.md). `cohort` is required where listed and must be `math`
 or `portuguese`.
 
 | Method | Path               | Parameters | Description |
 | ------ | ------------------ | ---------- | ----------- |
 | GET    | `/health`          | — | Liveness, version and environment |
+| GET    | `/ready`           | — | Component readiness (api, dataset, statistics, models, interpretability) |
+| GET    | `/dashboard/summary` | — | Observed cohort overview, selected-model evaluation, readiness |
+| GET    | `/pipeline/summary` | `cohort`, `scenario` | Every pipeline step for one cohort and scenario, with availability |
 | GET    | `/project`         | — | Project identity, dataset presence, module status |
 | GET    | `/dataset/summary` | `cohort` | Rows, columns, numerical/categorical counts, missing/duplicate/invalid counts, validation status, source, target |
 | GET    | `/dataset/schema`  | `cohort` | Data dictionary for all 33 columns plus values observed in the cohort |
@@ -265,7 +352,10 @@ Errors use one shape, `{"code": "...", "detail": "..."}`:
 | Status | `code` | When |
 | ------ | ------ | ---- |
 | 422 | `invalid_request` | Unknown cohort, scenario or comparison variable, missing cohort, page or page size out of range, search too long |
+| 404 | `not_found` / 405 `method_not_allowed` | Unknown path or method |
 | 503 | `dataset_unavailable` | Dataset files not downloaded; `detail` gives the command |
+| 503 | `dataset_invalid` | A cohort file fails validation; analyses are refused |
+| 500 | `internal_error` | Unexpected error; logged with the request id, no internals in the body |
 | 422 | `invalid_record` | Prediction, explanation, sensitivity or risk record with an outcome column, a grade the scenario does not allow, a missing or unknown attribute, or an undocumented value |
 | 404 | `model_not_available` | Prediction requested from a model that was evaluated but not selected (only selected models are persisted) |
 | 503 | `models_unavailable` | No training run or interpretability results in `models/`, or an artefact failed its checksum/version check; `detail` gives the command |
