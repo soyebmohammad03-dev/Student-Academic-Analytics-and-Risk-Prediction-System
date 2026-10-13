@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RiskAnalysisView } from "./RiskAnalysisView";
@@ -61,40 +61,28 @@ function profiles(cohort: string) {
   };
 }
 
-function importance(url: URL) {
-  const task = url.searchParams.get("task");
+function classifiers(cohort: string) {
+  const metrics = { recall: 0.5, precision: 0.4, f1: 0.44, roc_auc: 0.6 };
   return {
-    cohort: url.searchParams.get("cohort"),
-    task,
-    scenario: url.searchParams.get("scenario"),
-    model: "logistic_regression",
-    model_label: `Fixture model (${task})`,
-    methods: [
+    cohort,
+    task: "classification",
+    primary_metric: "f1",
+    rows: [
       {
-        cohort: "math",
-        task,
         scenario: "early",
-        model: "logistic_regression",
-        model_label: "Fixture model",
-        method: "permutation_test",
-        method_label: "Permutation importance (held-out test set)",
-        data: "Test set, n = 8.",
-        unit: "decrease in test ROC-AUC",
-        items: [
-          {
-            feature: "failures",
-            attribute: "failures",
-            label: "Past class failures",
-            value: 0.12,
-            std: 0.02,
-            rank: 1,
-          },
-          { feature: "sex", attribute: "sex", label: "Sex", value: 0, std: 0, rank: 2 },
-        ],
-        limitations: ["Fixture limitation."],
+        label: "Early warning (no grades)",
+        information: "Non-grade attributes only.",
+        selected_model: "svm",
+        selected_label: "Fixture classifier",
+        best_cv_model: "svm",
+        cv: metrics,
+        cv_std: metrics,
+        test: metrics,
+        baseline_cv: metrics,
+        baseline_test: metrics,
       },
     ],
-    calibration: null,
+    note: "Fixture note.",
   };
 }
 
@@ -102,10 +90,9 @@ function mockApi(overrides: Record<string, () => Response> = {}) {
   const fetchMock = vi.fn((input: string) => {
     const url = new URL(input);
     const resource = url.pathname.split("/").pop()!;
+    const cohort = url.searchParams.get("cohort")!;
     if (overrides[resource]) return Promise.resolve(overrides[resource]());
-    return Promise.resolve(
-      json(resource === "profiles" ? profiles(url.searchParams.get("cohort")!) : importance(url)),
-    );
+    return Promise.resolve(json(resource === "profiles" ? profiles(cohort) : classifiers(cohort)));
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
@@ -114,48 +101,65 @@ function mockApi(overrides: Record<string, () => Response> = {}) {
 describe("RiskAnalysisView", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("renders group profiles and importance from the API", async () => {
+  it("renders the definition and group profiles from the API", async () => {
     mockApi();
     render(<RiskAnalysisView />);
 
     expect(
       await screen.findByRole("list", { name: "Academic risk by Past class failures" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("10 of 40 students (25.0%) had a final grade below 10."),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/few/)).toBeInTheDocument();
-    expect(
-      await screen.findByRole("list", { name: "Permutation importance (held-out test set)" }),
-    ).toBeInTheDocument();
-    // Zero-valued (unused) features are not drawn.
-    expect(screen.queryByTitle("Sex")).not.toBeInTheDocument();
-    expect(screen.getByText("Fixture limitation.")).toBeInTheDocument();
+    expect(screen.getByText("25.0%")).toBeInTheDocument();
+    expect(screen.getByText(/10 of 40/)).toBeInTheDocument();
+    expect(screen.getAllByText(/not dropout/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/n = 8 · few/)).toBeInTheDocument();
+    expect(screen.getByText("Fixture note about groups, not individuals.")).toBeInTheDocument();
   });
 
-  it("requests importance for the chosen task and scenario", async () => {
-    const fetchMock = mockApi();
+  it("keeps model-derived results apart from observed statistics", async () => {
+    mockApi();
     render(<RiskAnalysisView />);
-    await screen.findByText("Fixture model (classification)");
 
-    fireEvent.click(screen.getByRole("radio", { name: "Final grade" }));
-    fireEvent.click(screen.getByRole("radio", { name: "Full history" }));
+    expect(await screen.findByText("Fixture classifier")).toBeInTheDocument();
+    expect(screen.getAllByText("Observed · historical data").length).toBeGreaterThan(0);
+    expect(screen.getByText("Model evaluation")).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: /selected classifiers/ });
+    expect(within(table).getByText("50%")).toBeInTheDocument();
+  });
 
-    expect(await screen.findByText("Fixture model (regression)")).toBeInTheDocument();
-    const last = new URL(fetchMock.mock.calls.at(-1)![0]);
-    expect(last.searchParams.get("task")).toBe("regression");
-    expect(last.searchParams.get("scenario")).toBe("full_history");
+  it("does not use unsupported risk bands", async () => {
+    mockApi();
+    render(<RiskAnalysisView />);
+    await screen.findByText("Fixture classifier");
+    expect(screen.queryByText(/high risk/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/medium risk/i)).not.toBeInTheDocument();
   });
 
   it("explains how to produce missing models", async () => {
     mockApi({
-      importance: () =>
-        json({ code: "models_unavailable", detail: "No interpretability results." }, 503),
+      "scenario-comparison": () =>
+        json({ code: "models_unavailable", detail: "No training run." }, 503),
     });
     render(<RiskAnalysisView />);
 
     expect(await screen.findByText("The models have not been trained")).toBeInTheDocument();
-    expect(screen.getByText(/analytics\.interpret\.build/)).toBeInTheDocument();
+    expect(screen.getByText(/analytics\.ml\.train/)).toBeInTheDocument();
+    // Observed profiles still render.
+    expect(
+      await screen.findByRole("list", { name: "Academic risk by Past class failures" }),
+    ).toBeInTheDocument();
+  });
+
+  it("refetches for the chosen cohort", async () => {
+    const fetchMock = mockApi();
+    render(<RiskAnalysisView />);
+    await screen.findByText("Fixture classifier");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Portuguese" }));
+    await waitFor(() =>
+      expect(new URL(fetchMock.mock.calls.at(-1)![0]).searchParams.get("cohort")).toBe(
+        "portuguese",
+      ),
+    );
   });
 
   it("shows loading states before data arrives", () => {
@@ -165,6 +169,6 @@ describe("RiskAnalysisView", () => {
     );
     render(<RiskAnalysisView />);
     expect(screen.getByLabelText("Loading risk profiles")).toBeInTheDocument();
-    expect(screen.getByLabelText("Loading feature importance")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loading classifier results")).toBeInTheDocument();
   });
 });

@@ -1,30 +1,26 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 import { ChartFrame } from "@/components/charts/ChartFrame";
 import { DataUnavailable } from "@/components/data-explorer/states";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Callout, KindBadge } from "@/components/ui/Callout";
 import { Card } from "@/components/ui/Card";
+import { InfoTip } from "@/components/ui/InfoTip";
+import { MetricCard, MetricGrid } from "@/components/ui/MetricCard";
 import { Section } from "@/components/ui/Section";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { fmt } from "@/lib/format";
-import {
-  type ImportanceResult,
-  type ModelInterpretation,
-  type RiskProfiles,
-  type Scenario,
-  type SingleProfile,
-  type Task,
-  scenarioOptions,
-  taskOptions,
-} from "@/lib/risk";
+import { SegmentedControl, Toolbar, ToolbarItem } from "@/components/ui/SegmentedControl";
+import { LoadingBlock } from "@/components/ui/States";
+import { withQuery } from "@/lib/api";
+import { fmt, fmtInterval, fmtP, fmtShare } from "@/lib/format";
+import { type ScenarioComparison, metricInfo } from "@/lib/models";
+import type { RiskProfiles, SingleProfile } from "@/lib/risk";
 import { cohortPath } from "@/lib/statistics";
 import { useApi } from "@/lib/useApi";
 import { cohortOptions, useCohort } from "@/lib/useCohort";
-
-const TOP = 8;
 
 function pct(value: number | null) {
   return value === null ? "—" : `${(100 * value).toFixed(0)}%`;
@@ -35,7 +31,7 @@ function ProfileChart({ profile, overall }: { profile: SingleProfile; overall: n
   return (
     <ChartFrame
       title={profile.label}
-      subtitle={`Cramér's V ${fmt(profile.cramers_v, 2)} (${profile.magnitude}) · BH-adjusted p ${fmt(profile.p_adjusted, 3)}`}
+      subtitle={`Cramér's V ${fmt(profile.cramers_v, 2)} (${profile.magnitude}) · BH-adjusted p ${fmtP(profile.p_adjusted)}`}
       table={{
         headers: ["Group", "Students", "At risk", "Share", "95% CI"],
         rows: profile.groups.map((g) => [
@@ -91,130 +87,214 @@ function ProfileChart({ profile, overall }: { profile: SingleProfile; overall: n
   );
 }
 
-/** One importance method on its own scale; methods are never placed on a shared axis. */
-function ImportanceCard({ result }: { result: ImportanceResult }) {
-  const items = result.items.filter((i) => i.value !== 0).slice(0, TOP);
-  const max = Math.max(...items.map((i) => Math.abs(i.value)), 1e-9);
-  const signed = result.method === "standardised_coefficient";
+type Pair = RiskProfiles["pairs"][number];
+
+/** Two-way table of observed shares; cells with fewer than 10 students are muted. */
+function PairTable({ pair }: { pair: Pair }) {
+  const rows = [...new Set(pair.cells.map((c) => c.row))];
+  const cols = [...new Set(pair.cells.map((c) => c.column))];
+  const cell = (r: string, c: string) => pair.cells.find((x) => x.row === r && x.column === c);
+  const label = (key: string, kind: "row" | "column") => {
+    const found = pair.cells.find((x) => x[kind] === key);
+    return found ? (kind === "row" ? found.row_label : found.column_label) : key;
+  };
   return (
-    <ChartFrame
-      title={result.method_label}
-      subtitle={`${result.unit}. ${result.data}`}
-      table={{
-        headers: ["Rank", "Feature", "Value", "SD"],
-        rows: items.map((i) => [i.rank, i.label, i.value.toFixed(3), fmt(i.std, 3)]),
-      }}
-    >
-      {() => (
-        <>
-          <ul className="space-y-2" aria-label={result.method_label}>
-            {items.map((i) => (
-              <li
-                key={i.feature}
-                className="grid grid-cols-[minmax(0,11rem)_1fr_auto] items-center gap-3 text-[12px]"
-              >
-                <span className="truncate text-text-secondary" title={i.label}>
-                  {i.label}
-                </span>
-                <span className="h-3 rounded-r bg-fill">
-                  <span
-                    className="block h-full rounded-r"
-                    style={{
-                      width: `${(100 * Math.abs(i.value)) / max}%`,
-                      // Coefficients: sign shown by colour. Other methods: a negative
-                      // value means no measurable reliance, so it is drawn muted.
-                      background:
-                        i.value >= 0
-                          ? "var(--chart-1)"
-                          : signed
-                            ? "var(--chart-2)"
-                            : "var(--text-tertiary)",
-                    }}
-                  />
-                </span>
-                <span className="text-right text-text tabular-nums">
-                  {signed && i.value > 0 ? "+" : ""}
-                  {i.value.toFixed(3)}
-                </span>
-              </li>
+    <Card className="p-4 sm:p-5">
+      <p className="text-[14px] font-semibold text-text">
+        {pair.rows_label} × {pair.columns_label}
+      </p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[320px] border-separate border-spacing-1 text-[12px] tabular-nums">
+          <caption className="sr-only">
+            Observed share below the pass mark by {pair.rows_label} and {pair.columns_label}
+          </caption>
+          <thead>
+            <tr className="text-[11px] text-text-tertiary">
+              <th scope="col" className="text-left font-medium">
+                {pair.rows_label} ↓
+              </th>
+              {cols.map((c) => (
+                <th key={c} scope="col" className="font-medium">
+                  {label(c, "column")}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r}>
+                <th scope="row" className="pr-2 text-left font-medium text-text-secondary">
+                  {label(r, "row")}
+                </th>
+                {cols.map((c) => {
+                  const x = cell(r, c);
+                  if (!x) return <td key={c} />;
+                  const share = x.risk_percent ?? 0;
+                  return (
+                    <td
+                      key={c}
+                      className="rounded-lg px-2 py-2 text-center"
+                      title={`${x.at_risk} of ${x.n} · 95% CI ${fmtInterval(x.risk_ci)}`}
+                      style={{
+                        background: x.reliable
+                          ? `color-mix(in srgb, var(--chart-2) ${Math.round(6 + 0.5 * share)}%, transparent)`
+                          : "var(--fill)",
+                      }}
+                    >
+                      <span className={x.reliable ? "text-text" : "text-text-tertiary"}>
+                        {x.risk_percent === null ? "—" : `${x.risk_percent.toFixed(0)}%`}
+                      </span>
+                      <span className="block text-[10px] text-text-tertiary">
+                        n = {x.n}
+                        {x.reliable ? "" : " · few"}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
             ))}
-          </ul>
-          <ul className="mt-3 list-disc space-y-1 pl-4 text-[11px] leading-4 text-text-tertiary">
-            {result.limitations.map((l) => (
-              <li key={l}>{l}</li>
-            ))}
-          </ul>
-        </>
-      )}
-    </ChartFrame>
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
-function Loading({ label }: { label: string }) {
+/** Selected classifiers' held-out ability to find students below the pass mark. */
+function ModelDerived({ data }: { data: ScenarioComparison }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2" aria-busy="true" aria-label={label}>
-      {Array.from({ length: 2 }, (_, i) => (
-        <Skeleton key={i} className="h-56 w-full rounded-2xl" />
-      ))}
+    <div className="overflow-x-auto rounded-2xl bg-surface shadow-card">
+      <table className="w-full min-w-[560px] text-left text-[13px]">
+        <caption className="sr-only">Held-out test performance of the selected classifiers</caption>
+        <thead>
+          <tr className="border-b border-separator bg-surface-muted text-[11px] text-text-tertiary">
+            <th scope="col" className="px-4 py-2.5 font-medium">
+              Scenario · selected model
+            </th>
+            {(["recall", "precision", "f1", "roc_auc"] as const).map((m) => (
+              <th key={m} scope="col" className="px-4 py-2.5 text-right font-medium">
+                <span className="inline-flex items-center gap-1">
+                  {metricInfo[m].short}
+                  <InfoTip label={`What is ${metricInfo[m].label}?`}>
+                    {metricInfo[m].definition}
+                  </InfoTip>
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-separator">
+          {data.rows.map((r) => (
+            <tr key={r.scenario}>
+              <th scope="row" className="px-4 py-2.5 font-medium text-text">
+                {r.label}
+                <span className="block text-[12px] font-normal text-text-secondary">
+                  {r.selected_label}
+                </span>
+              </th>
+              {(["recall", "precision", "f1", "roc_auc"] as const).map((m) => (
+                <td key={m} className="px-4 py-2.5 text-right text-text tabular-nums">
+                  {m === "recall" || m === "precision" ? fmtShare(r.test[m]) : fmt(r.test[m], 2)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 export function RiskAnalysisView() {
   const [cohort, setCohort] = useCohort();
-  const [task, setTask] = useState<Task>("classification");
-  const [scenario, setScenario] = useState<Scenario>("early");
   const [reloadKey, setReloadKey] = useState(0);
   const retry = () => setReloadKey((k) => k + 1);
 
   const profiles = useApi<RiskProfiles>(cohortPath("/risk/profiles", cohort), reloadKey);
-  const importance = useApi<ModelInterpretation>(
-    cohortPath("/interpretability/importance", cohort, { task, scenario }),
+  const classifiers = useApi<ScenarioComparison>(
+    withQuery("/models/scenario-comparison", { cohort, task: "classification" }),
     reloadKey,
   );
   const p = profiles.data?.cohort === cohort ? profiles.data : undefined;
-  const imp =
-    importance.data?.cohort === cohort &&
-    importance.data.task === task &&
-    importance.data.scenario === scenario
-      ? importance.data
-      : undefined;
+  const models = classifiers.data?.cohort === cohort ? classifiers.data : undefined;
 
   return (
     <div className="space-y-12 sm:space-y-14">
       <PageHeader
-        eyebrow="Modelling · Phase 6"
+        eyebrow="Modelling"
         title="Risk Analysis"
-        description="Observed academic risk across student groups, and which inputs the selected models rely on. Academic risk means a final grade below 10; it is not dropout. Nothing here is causal or a judgement about an individual."
+        description="Observed academic risk across school-related student groups, with sample sizes and uncertainty. Nothing here is causal or a judgement about an individual."
       >
-        <SegmentedControl
-          label="Cohort"
-          options={cohortOptions}
-          value={cohort}
-          onChange={setCohort}
-          className="mt-6"
-        />
+        <Toolbar className="mt-6">
+          <ToolbarItem label="Cohort">
+            <SegmentedControl
+              label="Cohort"
+              options={cohortOptions}
+              value={cohort}
+              onChange={setCohort}
+            />
+          </ToolbarItem>
+        </Toolbar>
       </PageHeader>
 
-      <Section
-        title="Group-level risk profiles"
-        description="Share of students below the pass mark in each group, with 95% intervals (black line). The grey mark is the cohort rate. These describe groups in one historical dataset, not any student."
-      >
+      <Section title="Definition" action={<KindBadge kind="observed" />}>
         {profiles.error ? (
           <DataUnavailable error={profiles.error} onRetry={retry} />
         ) : !p ? (
-          <Loading label="Loading risk profiles" />
+          <LoadingBlock label="Loading the cohort rate" height="h-28" />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+            <MetricGrid label="Observed academic risk">
+              <MetricCard
+                label="Below the pass mark"
+                value={`${p.risk_percent.toFixed(1)}%`}
+                hint={`${p.at_risk} of ${p.n} · 95% CI ${fmtInterval(p.risk_ci, 1)}`}
+              />
+              <MetricCard label="Pass mark" value={p.threshold} unit="/ 20" hint="Final grade G3" />
+            </MetricGrid>
+            <Card className="p-5 text-[13px] leading-5 text-text-secondary">
+              <p>
+                <span className="font-medium text-text">Academic risk</span> means a final grade G3
+                below {p.threshold} of 20 in the historical data. It is not dropout — the dataset
+                has no dropout outcome — and these figures are observed proportions, not
+                predictions.
+              </p>
+              <p className="mt-2">
+                No low/medium/high bands are used: there are no validated educational thresholds for
+                them. Demographic groups are not profiled here, so that no demographic group is
+                labelled as at risk.
+              </p>
+            </Card>
+          </div>
+        )}
+      </Section>
+
+      <Section
+        title="Group-level risk profiles"
+        description="Share of students below the pass mark in each group, with 95% intervals (black line). The grey mark is the cohort rate. Groups with fewer than 10 students are marked “few”."
+        action={<KindBadge kind="observed" />}
+      >
+        {profiles.error ? null : !p ? (
+          <LoadingBlock label="Loading risk profiles" count={2} height="h-56" />
         ) : (
           <>
-            <p className="mb-4 px-1 text-[14px] text-text">
-              {p.at_risk} of {p.n} students ({p.risk_percent.toFixed(1)}%) had a final grade below{" "}
-              {p.threshold}.
-            </p>
             <div className="grid gap-3 md:grid-cols-2">
               {p.single.map((s) => (
                 <ProfileChart key={s.variable} profile={s} overall={p.risk_percent} />
               ))}
             </div>
+            {p.pairs.length > 0 && (
+              <>
+                <h3 className="mt-8 mb-3 px-1 text-[14px] font-semibold text-text">
+                  Two-way tables
+                </h3>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {p.pairs.map((pair) => (
+                    <PairTable key={`${pair.rows_variable}-${pair.columns_variable}`} pair={pair} />
+                  ))}
+                </div>
+              </>
+            )}
             <Card className="mt-3 p-5">
               <ul className="list-disc space-y-1.5 pl-4 text-[13px] leading-5 text-text-secondary">
                 {p.notes.map((n) => (
@@ -227,45 +307,43 @@ export function RiskAnalysisView() {
       </Section>
 
       <Section
-        title="What the selected models rely on"
-        description="Global importance for the model selected in Phase 5. Each method answers a different question and has its own unit, so values are not compared across methods."
+        title="What the models add"
+        description="Model-derived and kept separate from the observed statistics above: how often each scenario's selected classifier found the held-out students who finished below the pass mark."
+        action={<KindBadge kind="model_evaluation" />}
       >
-        <div className="mb-4 flex flex-wrap gap-3">
-          <SegmentedControl label="Task" options={taskOptions} value={task} onChange={setTask} />
-          <SegmentedControl
-            label="Scenario"
-            options={scenarioOptions}
-            value={scenario}
-            onChange={setScenario}
-          />
-        </div>
-        {importance.error ? (
-          <DataUnavailable error={importance.error} onRetry={retry} />
-        ) : !imp ? (
-          <Loading label="Loading feature importance" />
+        {classifiers.error ? (
+          <DataUnavailable error={classifiers.error} onRetry={retry} />
+        ) : !models ? (
+          <LoadingBlock label="Loading classifier results" height="h-40" />
         ) : (
           <>
-            <p className="mb-4 px-1 text-[14px] text-text">
-              Selected model: <span className="font-semibold">{imp.model_label}</span>
+            <ModelDerived data={models} />
+            <p className="mt-3 px-1 text-[12px] leading-[18px] text-text-tertiary">
+              Recall below 100% means some students who finished below the pass mark were not
+              flagged. A model flag is a prompt for a conversation, never a decision.
             </p>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {imp.methods.map((m) => (
-                <ImportanceCard key={m.method_label} result={m} />
-              ))}
-            </div>
-            {imp.calibration && (
-              <Card className="mt-3 p-5 text-[13px] leading-5 text-text-secondary">
-                <p className="text-text">
-                  Probability check on the test set: mean predicted{" "}
-                  {imp.calibration.mean_predicted.toFixed(2)} vs observed{" "}
-                  {imp.calibration.observed_rate.toFixed(2)} (Brier{" "}
-                  {imp.calibration.brier.toFixed(3)}, n = {imp.calibration.n}).
-                </p>
-                <p className="mt-1">{imp.calibration.note}</p>
-              </Card>
-            )}
           </>
         )}
+      </Section>
+
+      <Section title="Suggestions for human review">
+        <Callout tone="responsible">
+          <p>
+            For a single record, the Prediction page lists general suggestions for a teacher or
+            adviser to consider together with the student — for example reviewing study routines or
+            looking at attendance patterns. A suggestion appears only when this cohort&apos;s data
+            show a higher observed at-risk share for the triggering group (Fisher&apos;s exact test,
+            exploratory); otherwise it is withheld and the evidence is shown. Suggestions are never
+            punitive or disciplinary, never clinical or family judgements, and are not triggered by
+            demographic or family attributes.
+          </p>
+          <Link
+            href="/prediction"
+            className="mt-2 inline-flex items-center gap-1 text-accent hover:underline"
+          >
+            Open the prediction page <ArrowRight className="size-3.5" aria-hidden />
+          </Link>
+        </Callout>
       </Section>
     </div>
   );

@@ -31,7 +31,3 @@ export function StatusBadge({
     </span>
   );
 }
-
-export function PhaseBadge({ phase }: { phase: number }) {
-  return <StatusBadge>Phase {phase}</StatusBadge>;
-}

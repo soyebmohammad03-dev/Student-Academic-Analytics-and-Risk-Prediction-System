@@ -2,7 +2,7 @@
 
 Base URL: `http://localhost:8000/api/v1`. Interactive schemas (OpenAPI):
 <http://localhost:8000/docs>. Every response is JSON and typed with a Pydantic model; the
-TypeScript types in `frontend/src/lib/{api,statistics,risk}.ts` mirror them.
+TypeScript types in `frontend/src/lib/{api,statistics,models,risk}.ts` mirror them.
 
 ## Conventions
 

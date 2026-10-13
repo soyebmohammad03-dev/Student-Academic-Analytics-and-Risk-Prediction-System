@@ -3,28 +3,6 @@
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000/api/v1";
 
-export interface HealthResponse {
-  status: "ok";
-  version: string;
-  environment: string;
-}
-
-export interface ProjectInfo {
-  name: string;
-  version: string;
-  dataset: {
-    name: string;
-    source_url: string;
-    available_locally: boolean;
-  };
-  modules: Array<{
-    key: string;
-    name: string;
-    phase: number;
-    status: "planned" | "in_progress" | "available";
-  }>;
-}
-
 // --- Dataset ------------------------------------------------------------------
 
 export type Cohort = "math" | "portuguese";
@@ -132,6 +110,112 @@ export interface CohortOverlap {
   caveat: string;
 }
 
+// --- System (Phase 7) ---------------------------------------------------------
+
+export type ComponentState = "available" | "unavailable" | "degraded";
+
+export interface ComponentStatus {
+  key: "api" | "dataset" | "statistics" | "models" | "interpretability";
+  label: string;
+  status: ComponentState;
+  detail: string;
+  /** Command that fixes the component, when one exists. */
+  action: string | null;
+}
+
+export interface Readiness {
+  status: "ready" | "degraded";
+  components: ComponentStatus[];
+}
+
+export interface WilsonInterval {
+  low: number | null;
+  high: number | null;
+  confidence: number;
+}
+
+/** Observed in the historical data; never a prediction. */
+export interface ObservedRisk {
+  kind: "observed_historical";
+  definition: string;
+  n: number;
+  at_risk: number;
+  percent: number;
+  ci: WilsonInterval;
+}
+
+export interface CohortOverview {
+  cohort: Cohort;
+  subject: string;
+  rows: number;
+  columns: number;
+  validation_status: CheckStatus;
+  missing_values: number;
+  duplicate_rows: number;
+  invalid_values: number;
+  final_grade: {
+    n: number;
+    mean: number | null;
+    median: number | null;
+    std: number | null;
+    minimum: number | null;
+    maximum: number | null;
+    zero_count: number;
+  };
+  observed_risk: ObservedRisk;
+}
+
+export interface SelectedModelSummary {
+  kind: "model_evaluation";
+  cohort: Cohort;
+  task: "regression" | "classification";
+  scenario: "early" | "mid_year" | "full_history";
+  model: string;
+  label: string;
+  /** Primary metric: "rmse" (regression) or "f1" (classification). */
+  metric: string;
+  cv_mean: number | null;
+  cv_std: number | null;
+  test: number | null;
+}
+
+export interface DashboardSummary {
+  status: "ready" | "degraded";
+  components: ComponentStatus[];
+  dataset: { available: boolean; detail: string; cohorts: CohortOverview[] };
+  models: {
+    available: boolean;
+    detail: string;
+    trained_at: string | null;
+    selected: SelectedModelSummary[];
+  };
+  notes: string[];
+}
+
+export interface PipelineSummary {
+  cohort: Cohort;
+  scenario: "early" | "mid_year" | "full_history";
+  steps: Array<{ step: string; status: ComponentState; detail: string }>;
+  overview: CohortOverview | null;
+  scenario_features: string[];
+  research_questions: Array<{
+    key: string;
+    evidence: "confirmatory" | "exploratory";
+    p_adjusted: number | null;
+    significant: boolean;
+    effect: {
+      name: string;
+      value: number | null;
+      ci: WilsonInterval | null;
+      magnitude: string;
+    } | null;
+  }>;
+  eda_charts: Record<string, number>;
+  selected_models: SelectedModelSummary[];
+  top_attributes: Record<string, string[]>;
+  risk_profile_highlights: string[];
+}
+
 // --- Transport ----------------------------------------------------------------
 
 export class ApiError extends Error {
@@ -188,7 +272,12 @@ export function datasetPath(
   return `/dataset/${resource}?${params}`;
 }
 
-export const api = {
-  health: (init?: RequestInit) => request<HealthResponse>("/health", init),
-  project: (init?: RequestInit) => request<ProjectInfo>("/project", init),
-};
+/** Build `path?key=value…` from defined parameters, in a stable order. */
+export function withQuery(path: string, params: Record<string, string | number | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) search.set(key, String(value));
+  }
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+}

@@ -5,13 +5,13 @@ of student data, through **exploratory analytics** and **reproducible preprocess
 to a **comparison of machine-learning models** that predict academic performance and
 identify **academic risk** — presented through a modern, interpretable web application.
 
-> **Status: Phase 7 of 9 complete — end-to-end backend integration.**
-> One analytical pipeline now coordinates the whole backend: validated data,
-> preprocessing, statistics and EDA, trained models, explanations and academic-risk
-> analysis. It caches each result per file version. The API reports component
-> readiness honestly, serves a dashboard summary that separates observed facts from
-> model evaluation, uses one error format, and logs structured JSON. The full Apple-style
-> frontend is Phase 8. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) and the
+> **Status: Phase 8 of 9 complete — interactive analytics frontend.**
+> Every page now reads real results from the integrated FastAPI backend: a dashboard
+> that separates observed historical data from model evaluation, the Data Explorer,
+> statistical analysis, EDA, model comparison, a validated prediction form with
+> explanations, interpretability, risk analysis and a methodology page. Cohort and
+> scenario selections are shared across pages. Phase 9 (final validation and
+> presentation) remains. See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) and the
 > [API reference](docs/API.md).
 
 ISPA undergraduate AI / Data Analytics project.
@@ -353,8 +353,25 @@ npm install
 npm run dev
 ```
 
-App: <http://localhost:3000>. The dashboard shows live backend status, and the Data
-Explorer (`/data-explorer`) shows the dataset once the API is running.
+App: <http://localhost:3000>. Start the API first (above); every page reads its
+results from it and explains what to run when something is missing.
+
+| Page | Route | Main endpoints |
+| ---- | ----- | -------------- |
+| Dashboard | `/` | `/dashboard/summary`, `/statistics/hypothesis-tests`, `/pipeline/summary`, `/statistics/distributions` |
+| Data Explorer | `/data-explorer` | `/dataset/{summary,quality,schema,records,overlap}` |
+| Statistical Analysis | `/statistics` | `/statistics/*` |
+| Exploratory Analysis | `/eda` | `/eda/charts` |
+| Model Comparison | `/model-comparison` | `/models/{evaluations,selected,scenario-comparison,cohort-comparison}` |
+| Prediction | `/prediction` | `/dataset/schema`, `POST /models/predict`, `POST /interpretability/explain`, `POST /risk/insights` |
+| Interpretability | `/interpretability` | `/interpretability/importance`, `POST /interpretability/{explain,sensitivity,scenario-sensitivity}` |
+| Risk Analysis | `/risk-analysis` | `/risk/profiles`, `/models/scenario-comparison` |
+| Methodology | `/about` | — (static, follows `docs/METHODOLOGY.md`) |
+
+The selected cohort and scenario follow you between pages (URL parameters, then the
+tab's `sessionStorage`; only those two values are stored). The prediction form is
+generated from `/dataset/schema`, shows only the inputs the chosen scenario allows,
+and never offers G3.
 
 ### Quality checks
 
@@ -375,7 +392,7 @@ Runs Ruff, pytest, ESLint, TypeScript, Vitest and a production build.
 | 5 | Machine learning & model evaluation | ✅ Complete |
 | 6 | Interpretability & academic risk analysis | ✅ Complete |
 | 7 | End-to-end backend integration | ✅ Complete |
-| 8 | Complete Apple-style frontend | Planned |
+| 8 | Complete Apple-style frontend | ✅ Complete |
 | 9 | Final validation, documentation & presentation readiness | Planned |
 
 ## Licence

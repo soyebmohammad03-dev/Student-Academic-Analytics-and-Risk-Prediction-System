@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/ui/Section";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SegmentedControl, Toolbar, ToolbarItem } from "@/components/ui/SegmentedControl";
 import {
   type Cohort,
   type CohortOverlap as Overlap,
@@ -70,17 +70,20 @@ export function DataExplorer() {
   return (
     <div className="space-y-12 sm:space-y-14">
       <PageHeader
-        eyebrow="Analysis · UCI Student Performance"
+        eyebrow="Analysis"
         title="Data Explorer"
         description="Browse the two published student cohorts, check how clean the data is, and see what every attribute means — before any statistics or modelling."
       >
-        <SegmentedControl
-          label="Cohort"
-          options={cohortOptions}
-          value={cohort}
-          onChange={selectCohort}
-          className="mt-6"
-        />
+        <Toolbar className="mt-6">
+          <ToolbarItem label="Cohort">
+            <SegmentedControl
+              label="Cohort"
+              options={cohortOptions}
+              value={cohort}
+              onChange={selectCohort}
+            />
+          </ToolbarItem>
+        </Toolbar>
       </PageHeader>
 
       {error ? (

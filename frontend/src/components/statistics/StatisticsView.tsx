@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
 import { Section } from "@/components/ui/Section";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SegmentedControl, Toolbar, ToolbarItem } from "@/components/ui/SegmentedControl";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fmt, fmtP, fmtPercent } from "@/lib/format";
 import {
@@ -84,17 +84,20 @@ export function StatisticsView() {
   return (
     <div className="space-y-12 sm:space-y-14">
       <PageHeader
-        eyebrow="Analysis · Phase 4"
+        eyebrow="Analysis"
         title="Statistical Analysis"
         description="Descriptive statistics, correlations and hypothesis tests on the validated data. Every result describes an association in these students' records, never a cause."
       >
-        <SegmentedControl
-          label="Cohort"
-          options={cohortOptions}
-          value={cohort}
-          onChange={setCohort}
-          className="mt-6"
-        />
+        <Toolbar className="mt-6">
+          <ToolbarItem label="Cohort">
+            <SegmentedControl
+              label="Cohort"
+              options={cohortOptions}
+              value={cohort}
+              onChange={setCohort}
+            />
+          </ToolbarItem>
+        </Toolbar>
       </PageHeader>
 
       {error ? (

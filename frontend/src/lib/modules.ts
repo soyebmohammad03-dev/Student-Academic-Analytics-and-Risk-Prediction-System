@@ -4,6 +4,7 @@ import {
   Crosshair,
   GitCompareArrows,
   LayoutDashboard,
+  ScanSearch,
   type LucideIcon,
   ShieldAlert,
   Sigma,
@@ -23,8 +24,6 @@ export interface AppModule {
   summary: string;
   /** Scope of the module, mirrored from PROJECT_ROADMAP.md. */
   scope: string[];
-  /** What already exists while the module is in progress. */
-  progressNote?: string;
 }
 
 export const analysisModules: AppModule[] = [
@@ -79,38 +78,49 @@ export const analysisModules: AppModule[] = [
 
 export const modellingModules: AppModule[] = [
   {
-    key: "prediction",
-    title: "Prediction",
-    href: "/prediction",
-    icon: Crosshair,
-    phase: 6,
-    status: "in_progress",
-    summary: "Predict final grade and academic risk under clearly stated input scenarios.",
-    progressNote:
-      "The prediction and explanation services are available through the API (POST /api/v1/models/predict, /api/v1/interpretability/explain and /api/v1/risk/insights). The input form is built in Phase 8.",
-    scope: [
-      "Validated input form for a single student profile",
-      "Grade (regression) and academic-risk (classification) outputs",
-      "Explicit scenario selection: full history (G1+G2), mid-year (G1) or early (no grades)",
-      "Per-prediction explanation of contributing factors",
-    ],
-  },
-  {
     key: "models",
     title: "Model Comparison",
     href: "/model-comparison",
     icon: GitCompareArrows,
     phase: 5,
-    status: "in_progress",
+    status: "available",
     summary: "Cross-validated comparison of candidate models against simple baselines.",
-    progressNote:
-      "Models are trained and evaluated on the real dataset (Phase 5). Results are served by the API at /api/v1/models and summarised in docs/ML_RESULTS.md; this page is built in Phase 8.",
     scope: [
       "Baselines: mean predictor and majority class",
-      "Regression: MAE, MSE, RMSE, R²",
-      "Classification: accuracy, precision, recall, F1, ROC-AUC, confusion matrix",
-      "Nested, stratified cross-validation and bounded grid-search tuning",
+      "Regression: MAE, RMSE, R²",
+      "Classification: precision, recall, F1, ROC-AUC, confusion matrix",
+      "Nested cross-validation separated from the held-out test set",
       "Early, mid-year and full-history scenarios compared for both cohorts",
+    ],
+  },
+  {
+    key: "prediction",
+    title: "Prediction",
+    href: "/prediction",
+    icon: Crosshair,
+    phase: 6,
+    status: "available",
+    summary: "Predict final grade and academic risk for one record under a stated scenario.",
+    scope: [
+      "Validated input form for a single student profile",
+      "Grade (regression) and academic-risk (classification) outputs, shown separately",
+      "Explicit scenario selection: early (no grades), mid-year (G1) or full history (G1+G2)",
+      "Per-prediction explanation, observed group statistics and suggestions for review",
+    ],
+  },
+  {
+    key: "interpretability",
+    title: "Interpretability",
+    href: "/interpretability",
+    icon: ScanSearch,
+    phase: 6,
+    status: "available",
+    summary: "What the selected models rely on, globally and for one record.",
+    scope: [
+      "Global importance per method, each on its own scale",
+      "Probability calibration of the selected classifiers",
+      "Individual Shapley explanations",
+      "Model sensitivity experiments for school-related attributes and scenarios",
     ],
   },
   {
@@ -120,12 +130,12 @@ export const modellingModules: AppModule[] = [
     icon: ShieldAlert,
     phase: 6,
     status: "available",
-    summary: "Interpretable insight into which factors are associated with academic risk.",
+    summary: "Observed academic risk across school-related groups, with uncertainty.",
     scope: [
       "Observed academic risk by past failures, study time, absences and support, with 95% intervals",
-      "Global importance of the selected models: permutation, Shapley, impurity and coefficients",
-      "Probability calibration of the selected classifiers",
-      "Individual explanations, sensitivity experiments and suggestions via the API",
+      "Two-way tables with sample sizes",
+      "Selected classifiers' ability to find students below the pass mark",
+      "Evidence-checked suggestions for human review",
     ],
   },
 ];
@@ -137,15 +147,9 @@ export const dashboardItem = {
 } as const;
 
 export const aboutItem = {
-  title: "About & Methodology",
+  title: "Methodology",
   href: "/about",
   icon: BookOpen,
 } as const;
 
 export const allModules: AppModule[] = [...analysisModules, ...modellingModules];
-
-export function getModule(key: string): AppModule {
-  const found = allModules.find((m) => m.key === key);
-  if (!found) throw new Error(`Unknown module: ${key}`);
-  return found;
-}

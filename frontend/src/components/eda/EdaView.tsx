@@ -11,7 +11,7 @@ import { DataUnavailable } from "@/components/data-explorer/states";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DataTable } from "@/components/ui/DataTable";
 import { Section } from "@/components/ui/Section";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SegmentedControl, Toolbar, ToolbarItem } from "@/components/ui/SegmentedControl";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fmt } from "@/lib/format";
 import { type Eda, cohortPath } from "@/lib/statistics";
@@ -29,17 +29,20 @@ export function EdaView() {
   return (
     <div className="space-y-12 sm:space-y-14">
       <PageHeader
-        eyebrow="Analysis · Phase 4"
+        eyebrow="Analysis"
         title="Exploratory Data Analysis"
         description="Distributions, relationships and profiles computed from every student in the cohort. Patterns shown here are descriptive and do not imply cause."
       >
-        <SegmentedControl
-          label="Cohort"
-          options={cohortOptions}
-          value={cohort}
-          onChange={setCohort}
-          className="mt-6"
-        />
+        <Toolbar className="mt-6">
+          <ToolbarItem label="Cohort">
+            <SegmentedControl
+              label="Cohort"
+              options={cohortOptions}
+              value={cohort}
+              onChange={setCohort}
+            />
+          </ToolbarItem>
+        </Toolbar>
       </PageHeader>
 
       {eda.error ? (

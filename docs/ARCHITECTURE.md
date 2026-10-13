@@ -25,9 +25,10 @@
   the analytics package and persisted with metadata. The API never trains.
 - **One-way dependencies.** `app` → `analytics`; `analytics` never imports `app`.
   The frontend only talks to the API.
-- **Honest UI.** The frontend renders only data returned by the API. Module status is
-  declared by the backend (`GET /api/v1/project`), so unfinished modules are shown as
-  planned rather than with placeholder numbers.
+- **Honest UI.** The frontend renders only data returned by the API. When a component
+  is missing, a page shows why and the command that fixes it, never placeholder
+  numbers. Results that could be confused carry a visible kind (observed, model
+  evaluation, prediction, explanation, sensitivity).
 - **Reproducibility.** Fixed seeds, pipeline objects that bundle preprocessing with the
   model, and versioned metadata alongside every artifact.
 
@@ -78,12 +79,30 @@ UCI archive ──download.py──▶ data/raw/*.csv ──loader.py──▶ L
 
 | Path                     | Responsibility                                  |
 | ------------------------ | ----------------------------------------------- |
-| `src/app/`               | App Router pages, one folder per module         |
-| `src/components/layout/` | Shell: sidebar, top bar, page header            |
-| `src/components/ui/`     | Design-system primitives                        |
-| `src/components/data-explorer/` | Data Explorer: overview, quality, records table, dictionary, overlap |
-| `src/lib/`               | Module registry, typed API client, `useApi` fetch hook |
+| `src/app/`               | App Router pages, one folder per module (`/`, `/data-explorer`, `/statistics`, `/eda`, `/model-comparison`, `/prediction`, `/interpretability`, `/risk-analysis`, `/about`) |
+| `src/components/layout/` | Shell: sidebar, mobile sheet, skip link, page header |
+| `src/components/ui/`     | Design-system primitives: cards, metric cards, segmented controls and toolbars, tooltips, callouts and kind badges, fields, loading/empty states, tables |
+| `src/components/charts/` | Chart frame (tooltip + data table) and charts: histogram, bars, box plot, scatter, heatmap, grade strip |
+| `src/components/<page>/` | One folder per page: `dashboard`, `data-explorer`, `statistics`, `eda`, `models`, `prediction`, `interpret`, `risk`, `status` |
+| `src/lib/`               | Typed API client and response types (`api`, `statistics`, `models`, `risk`), `useApi` / `useApiPost` / `usePost` hooks, shared cohort/scenario state (`useCohort`), prediction-form rules (`features`), formatting |
 | `src/app/globals.css`    | Design tokens (colour, type, radius, elevation) for light and dark themes |
+
+**Data flow.** Pages are client components inside `Suspense` (they read `?cohort=` and
+`?scenario=`). Each request goes through `request()` in `lib/api.ts`, which turns every
+API error body into an `ApiError(code, detail)`. GET data uses `useApi(path)`, POSTs
+derived from state use `useApiPost(path, body)`, and on-demand POSTs use `usePost`.
+All three abort the superseded request and key results by request, so a slow response
+for an old cohort or scenario can never be displayed. Views also check that a
+response's own `cohort`/`task`/`scenario` match the current selection.
+
+**Shared selection.** `useCohort()` and `useScenario()` read the URL first and fall back
+to the tab's `sessionStorage`, so the context follows the user across pages and links
+stay shareable. Only those two strings are stored; student records never are.
+
+**Leakage in the UI.** `lib/features.ts` builds the prediction form and request from
+`/dataset/schema`: target columns are never inputs, G1/G2 appear only in scenarios
+that allow them, and `G3`/`at_risk` are removed from any request body. The API
+enforces the same rules (`422 invalid_record`).
 
 ## Preprocessing layer (Phase 3)
 
@@ -183,8 +202,8 @@ report.py     docs/ML_RESULTS.md (written by train.py; a test checks it is curre
 - **Result types.** These are Pydantic models in `analytics/ml/results.py` and
   `comparison.py`, reused as API response models, as in the statistics layer.
 
-**Frontend.** The model-comparison page is marked *in progress*. Phase 5 delivers results
-through the API and `docs/ML_RESULTS.md`; the page is built in Phase 8.
+**Frontend.** `/model-comparison` (Phase 8) reads `/models/evaluations`, `/models/selected`,
+`/models/scenario-comparison` and `/models/cohort-comparison`.
 
 ## Interpretability and risk layer (Phase 6)
 
@@ -215,13 +234,12 @@ risk/suggestions.py  rules → Fisher evidence check → suggestions / not_shown
   separate fields.
 - **No new dependency.** SHAP is not used (see METHODOLOGY §7.2).
 
-**Frontend.** The Risk Analysis page (`/risk-analysis`) consumes `/risk/profiles`
-and `/interpretability/importance`:
-- profiles show bars with 95% intervals and the cohort rate;
-- importance shows one card per method, each on its own scale, with its limitations.
-
-The Prediction page is marked *in progress*. Its services exist in the API, and the
-input form is Phase 8 work.
+**Frontend.** `/risk-analysis` consumes `/risk/profiles` (bars with 95% intervals and the
+cohort rate, two-way tables) and, in a separate model-derived section,
+`/models/scenario-comparison`. Since Phase 8, global importance (one card per method,
+each on its own scale) lives on `/interpretability`, together with individual
+explanations and sensitivity experiments; `/prediction` uses `/models/predict`,
+`/interpretability/explain` and `/risk/insights`.
 
 ## Integrated backend (Phase 7)
 
